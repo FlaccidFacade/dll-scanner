@@ -19,6 +19,7 @@ from . import __version__
 from .scanner import DLLScanner, ScanResult
 from .analyzer import DependencyAnalyzer, AnalysisResult
 from .metadata import DLLMetadata
+from .cyclonedx_exporter import CycloneDXExporter
 
 
 def setup_logging(verbose: bool) -> logging.Logger:
@@ -81,6 +82,21 @@ def cli(ctx: click.Context, verbose: bool):
     type=click.Path(exists=True, file_okay=False, path_type=Path),
     help="Source directory for dependency analysis (required with -a)",
 )
+@click.option(
+    "--cyclonedx",
+    is_flag=True,
+    help="Export results in CycloneDX SBOM format",
+)
+@click.option(
+    "--project-name",
+    default="DLL Analysis Project",
+    help="Project name for CycloneDX SBOM (default: 'DLL Analysis Project')",
+)
+@click.option(
+    "--project-version",
+    default="1.0.0",
+    help="Project version for CycloneDX SBOM (default: '1.0.0')",
+)
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -91,6 +107,9 @@ def scan(
     max_workers: int,
     analyze_dependencies: bool,
     source_dir: Optional[Path],
+    cyclonedx: bool,
+    project_name: str,
+    project_version: str,
 ):
     """Scan a directory for DLL files and extract metadata."""
     console: Console = ctx.obj["console"]
@@ -161,16 +180,47 @@ def scan(
 
         # Save results to file if requested
         if output:
-            result_data = scan_result.to_dict()
-            if analysis_results:
-                dependency_report = analyzer.generate_dependency_report(
-                    analysis_results
-                )
-                result_data["dependency_analysis"] = dependency_report
+            if cyclonedx:
+                # Export in CycloneDX SBOM format
+                try:
+                    cyclonedx_exporter = CycloneDXExporter()
+                    cyclonedx_json = cyclonedx_exporter.export_to_json(
+                        scan_result,
+                        analysis_results,
+                        project_name,
+                        project_version,
+                        output,
+                    )
+                    console.print(f"\n[green]CycloneDX SBOM saved to:[/green] {output}")
+                    
+                    # Display summary
+                    bom = cyclonedx_exporter.export_to_cyclonedx(
+                        scan_result, analysis_results, project_name, project_version
+                    )
+                    summary = cyclonedx_exporter.get_component_summary(bom)
+                    console.print(f"[blue]SBOM contains {summary['total_components']} components[/blue]")
+                    
+                except ImportError as e:
+                    console.print(f"[red]Error:[/red] {str(e)}")
+                    console.print("[yellow]Install CycloneDX support with:[/yellow] pip install cyclonedx-bom")
+                    sys.exit(1)
+                except Exception as e:
+                    console.print(f"[red]Error exporting CycloneDX SBOM:[/red] {str(e)}")
+                    logger.error(f"CycloneDX export failed: {str(e)}")
+            else:
+                # Export in custom JSON format
+                result_data = scan_result.to_dict()
+                if analysis_results:
+                    dependency_report = analyzer.generate_dependency_report(
+                        analysis_results
+                    )
+                    result_data["dependency_analysis"] = dependency_report
 
-            with open(output, "w") as f:
-                json.dump(result_data, f, indent=2)
-            console.print(f"\n[green]Results saved to:[/green] {output}")
+                with open(output, "w") as f:
+                    json.dump(result_data, f, indent=2)
+                console.print(f"\n[green]Results saved to:[/green] {output}")
+        elif cyclonedx:
+            console.print("[yellow]Warning:[/yellow] --cyclonedx flag requires --output to be specified")
 
     except Exception as e:
         console.print(f"[red]Error during scan:[/red] {str(e)}")
@@ -189,8 +239,13 @@ def scan(
     type=click.Path(path_type=Path),
     help="Output file for metadata (JSON format)",
 )
+@click.option(
+    "--cyclonedx",
+    is_flag=True,
+    help="Export metadata in CycloneDX SBOM format",
+)
 @click.pass_context
-def inspect(ctx: click.Context, dll_file: Path, output: Optional[Path]):
+def inspect(ctx: click.Context, dll_file: Path, output: Optional[Path], cyclonedx: bool):
     """Inspect a single DLL file and display metadata."""
     console: Console = ctx.obj["console"]
     logger: logging.Logger = ctx.obj["logger"]
@@ -206,9 +261,42 @@ def inspect(ctx: click.Context, dll_file: Path, output: Optional[Path]):
         _display_dll_metadata(console, metadata)
 
         if output:
-            with open(output, "w") as f:
-                f.write(metadata.to_json())
-            console.print(f"\n[green]Metadata saved to:[/green] {output}")
+            if cyclonedx:
+                # Create a single-file scan result for CycloneDX export
+                from .scanner import ScanResult
+                scan_result = ScanResult(
+                    scan_path=str(dll_file.parent),
+                    recursive=False,
+                    dll_files=[metadata],
+                    total_files_scanned=1,
+                    total_dlls_found=1,
+                    scan_duration_seconds=0.0,
+                    errors=[]
+                )
+                
+                try:
+                    cyclonedx_exporter = CycloneDXExporter()
+                    cyclonedx_json = cyclonedx_exporter.export_to_json(
+                        scan_result,
+                        None,  # No dependency analysis for single file
+                        dll_file.stem,  # Use filename as project name
+                        metadata.file_version or "1.0.0",
+                        output,
+                    )
+                    console.print(f"\n[green]CycloneDX SBOM saved to:[/green] {output}")
+                except ImportError as e:
+                    console.print(f"[red]Error:[/red] {str(e)}")
+                    console.print("[yellow]Install CycloneDX support with:[/yellow] pip install cyclonedx-bom")
+                    sys.exit(1)
+                except Exception as e:
+                    console.print(f"[red]Error exporting CycloneDX SBOM:[/red] {str(e)}")
+                    logger.error(f"CycloneDX export failed: {str(e)}")
+            else:
+                with open(output, "w") as f:
+                    f.write(metadata.to_json())
+                console.print(f"\n[green]Metadata saved to:[/green] {output}")
+        elif cyclonedx:
+            console.print("[yellow]Warning:[/yellow] --cyclonedx flag requires --output to be specified")
 
     except Exception as e:
         console.print(f"[red]Error inspecting DLL:[/red] {str(e)}")

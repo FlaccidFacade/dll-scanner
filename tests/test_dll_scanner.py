@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 from dll_scanner import DLLScanner, DLLMetadata, DependencyAnalyzer
 from dll_scanner.scanner import ScanResult
 from dll_scanner.analyzer import DependencyMatch, AnalysisResult
+from dll_scanner.cyclonedx_exporter import CycloneDXExporter
 
 
 @pytest.fixture
@@ -307,6 +308,96 @@ class TestCLI:
 
         assert result.exit_code == 0
         assert "0.1.0" in result.output
+
+
+class TestCycloneDXExporter:
+    """Tests for CycloneDX SBOM export functionality."""
+
+    def test_exporter_initialization(self):
+        """Test CycloneDX exporter initialization."""
+        exporter = CycloneDXExporter()
+        assert exporter is not None
+
+    def test_export_empty_scan_result(self):
+        """Test exporting empty scan result to CycloneDX."""
+        exporter = CycloneDXExporter()
+        scan_result = ScanResult(
+            scan_path="/test",
+            recursive=True,
+            dll_files=[],
+            total_files_scanned=0,
+            total_dlls_found=0,
+            scan_duration_seconds=0.1,
+            errors=[],
+        )
+
+        bom = exporter.export_to_cyclonedx(scan_result)
+        
+        assert bom is not None
+        assert bom.metadata.component.name == "DLL Analysis Project"
+        assert len(bom.components) == 0
+
+    def test_export_with_dll_metadata(self, sample_dll_metadata):
+        """Test exporting scan result with DLL metadata."""
+        exporter = CycloneDXExporter()
+        scan_result = ScanResult(
+            scan_path="/test",
+            recursive=True,
+            dll_files=[sample_dll_metadata],
+            total_files_scanned=1,
+            total_dlls_found=1,
+            scan_duration_seconds=0.5,
+            errors=[],
+        )
+
+        bom = exporter.export_to_cyclonedx(scan_result)
+        
+        assert bom is not None
+        assert len(bom.components) == 1
+        
+        component = list(bom.components)[0]
+        assert component.name == "sample.dll"
+        assert component.version == "1.0.0"
+
+    def test_export_to_json(self, sample_dll_metadata):
+        """Test exporting to JSON format."""
+        exporter = CycloneDXExporter()
+        scan_result = ScanResult(
+            scan_path="/test",
+            recursive=True,
+            dll_files=[sample_dll_metadata],
+            total_files_scanned=1,
+            total_dlls_found=1,
+            scan_duration_seconds=0.5,
+            errors=[],
+        )
+
+        json_output = exporter.export_to_json(scan_result)
+        
+        assert json_output is not None
+        assert "bomFormat" in json_output
+        assert "CycloneDX" in json_output
+        assert "sample.dll" in json_output
+
+    def test_component_summary(self, sample_dll_metadata):
+        """Test getting component summary from BOM."""
+        exporter = CycloneDXExporter()
+        scan_result = ScanResult(
+            scan_path="/test",
+            recursive=True,
+            dll_files=[sample_dll_metadata],
+            total_files_scanned=1,
+            total_dlls_found=1,
+            scan_duration_seconds=0.5,
+            errors=[],
+        )
+
+        bom = exporter.export_to_cyclonedx(scan_result)
+        summary = exporter.get_component_summary(bom)
+        
+        assert summary["total_components"] == 1
+        assert "architectures" in summary
+        assert "signed_dlls" in summary
 
 
 # Integration tests

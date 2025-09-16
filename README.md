@@ -17,7 +17,8 @@ A powerful Python tool for scanning directories to find DLL files, extracting co
   - Confidence scoring for dependency matches
 - ⚡ **Parallel Processing**: Multi-threaded scanning for improved performance
 - 🎨 **Rich CLI Interface**: Beautiful command-line interface with progress bars and formatted output
-- 📄 **Multiple Output Formats**: JSON export for integration with other tools
+- 📄 **Multiple Output Formats**: JSON export and CycloneDX SBOM format for integration with other tools
+- 🔒 **Security & Compliance**: CycloneDX SBOM generation for supply chain security analysis
 - 🐍 **Python API**: Use as a library in your own projects
 
 ## Installation
@@ -90,6 +91,30 @@ dll-scanner scan /path/to/project \
     --output full_analysis.json
 ```
 
+#### CycloneDX SBOM Export
+
+```bash
+# Export scan results as CycloneDX SBOM
+dll-scanner scan /path/to/project \
+    --cyclonedx \
+    --project-name "MyProject" \
+    --project-version "2.1.0" \
+    --output project_sbom.json
+
+# Combine with dependency analysis
+dll-scanner scan /path/to/project \
+    --analyze-dependencies \
+    --source-dir /path/to/source \
+    --cyclonedx \
+    --project-name "MyProject" \
+    --project-version "2.1.0" \
+    --output project_sbom.json
+
+# Export single DLL as CycloneDX SBOM
+dll-scanner inspect mylib.dll --cyclonedx --output mylib_sbom.json
+```
+```
+
 #### Single File Inspection
 
 ```bash
@@ -121,6 +146,31 @@ for dll_metadata in result.dll_files:
         Path("/path/to/source")
     )
     print(f"{dll_metadata.file_name}: {len(analysis.confirmed_dependencies)} confirmed")
+```
+
+#### CycloneDX SBOM Export
+
+```python
+from dll_scanner import DLLScanner, CycloneDXExporter
+from pathlib import Path
+
+# Scan directory
+scanner = DLLScanner()
+result = scanner.scan_directory(Path("/path/to/project"))
+
+# Export to CycloneDX SBOM
+exporter = CycloneDXExporter()
+cyclonedx_json = exporter.export_to_json(
+    result,
+    project_name="MyProject",
+    project_version="1.0.0",
+    output_file=Path("project_sbom.json")
+)
+
+# Get SBOM summary
+bom = exporter.export_to_cyclonedx(result, project_name="MyProject")
+summary = exporter.get_component_summary(bom)
+print(f"SBOM contains {summary['total_components']} components")
 ```
 
 ### Advanced Usage
@@ -230,6 +280,7 @@ The static code analyzer can detect DLL dependencies in the following languages:
 - click >= 8.0.0
 - rich >= 13.0.0
 - pathlib-mate >= 1.0.0
+- cyclonedx-bom >= 4.0.0 (for CycloneDX SBOM export)
 
 ## Development
 

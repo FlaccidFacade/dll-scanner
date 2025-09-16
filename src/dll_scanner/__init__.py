@@ -14,5 +14,6 @@ __author__ = "DLL Scanner Contributors"
 from .scanner import DLLScanner
 from .metadata import DLLMetadata
 from .analyzer import DependencyAnalyzer
+from .cyclonedx_exporter import CycloneDXExporter
 
-__all__ = ["DLLScanner", "DLLMetadata", "DependencyAnalyzer"]
+__all__ = ["DLLScanner", "DLLMetadata", "DependencyAnalyzer", "CycloneDXExporter"]

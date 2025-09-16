@@ -33,6 +33,7 @@ dependencies = [
     "click>=8.0.0",
     "pathlib-mate>=1.0.0",
     "rich>=13.0.0",
+    "cyclonedx-bom>=4.0.0",
 ]
 
 [project.optional-dependencies]
