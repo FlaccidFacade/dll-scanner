@@ -10,6 +10,7 @@ on:
 
 jobs:
   test:
+    name: "Test on Python ${{ matrix.python-version }}"
     runs-on: windows-latest
     strategy:
       matrix:
@@ -61,6 +62,7 @@ jobs:
         fail_ci_if_error: true
 
   build:
+    name: "Build Package"
     needs: test
     runs-on: windows-latest
     
@@ -90,6 +92,7 @@ jobs:
         path: dist/
 
   publish:
+    name: "Publish to PyPI"
     needs: [test, build]
     runs-on: windows-latest
     if: github.event_name == 'release' && github.event.action == 'published'
@@ -117,6 +120,7 @@ jobs:
         twine upload dist/*
 
   security:
+    name: "Security Checks"
     runs-on: windows-latest
     
     steps:
