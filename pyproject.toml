@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dll-scanner"
+version = "0.1.0"
+description = "A Python tool to scan directories for DLL files and extract metadata"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "DLL Scanner Contributors"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Software Distribution",
+]
+keywords = ["dll", "metadata", "scanner", "dependencies", "static-analysis"]
+requires-python = ">=3.8"
+dependencies = [
+    "pefile>=2023.2.7",
+    "click>=8.0.0",
+    "pathlib-mate>=1.0.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "twine>=4.0.0",
+    "build>=0.10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/FlaccidFacade/dll-scanner"
+Repository = "https://github.com/FlaccidFacade/dll-scanner"
+Issues = "https://github.com/FlaccidFacade/dll-scanner/issues"
+
+[project.scripts]
+dll-scanner = "dll_scanner.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=dll_scanner --cov-report=term-missing"
