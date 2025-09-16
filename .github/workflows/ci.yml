@@ -10,19 +10,10 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        exclude:
-          # Reduce matrix size for efficiency
-          - os: macos-latest
-            python-version: "3.8"
-          - os: macos-latest
-            python-version: "3.9"
-          - os: windows-latest
-            python-version: "3.8"
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -35,7 +26,7 @@ jobs:
     - name: Cache pip dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
+        path: ~\AppData\Local\pip\Cache
         key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-pip-
@@ -63,7 +54,7 @@ jobs:
         pytest tests/ -v --cov=dll_scanner --cov-report=xml --cov-report=term-missing
 
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      if: matrix.python-version == '3.11'
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
@@ -71,7 +62,7 @@ jobs:
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     
     steps:
     - uses: actions/checkout@v4
@@ -100,7 +91,7 @@ jobs:
 
   publish:
     needs: [test, build]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     
     steps:
@@ -126,7 +117,7 @@ jobs:
         twine upload dist/*
 
   security:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     
     steps:
     - uses: actions/checkout@v4
