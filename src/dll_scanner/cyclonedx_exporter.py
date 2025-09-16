@@ -5,7 +5,22 @@ CycloneDX SBOM export functionality for DLL Scanner.
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cyclonedx.model import (
+        Bom,
+        Component,
+        ComponentType,
+        HashType,
+        ExternalReference,
+        ExternalReferenceType,
+        Tool,
+        Property,
+    )
+    from cyclonedx.model.component import ComponentScope
+    from cyclonedx.output.json import JsonV1Dot6
+    from cyclonedx.validation.json import JsonStrictValidator
 
 try:
     from cyclonedx.model import (
@@ -24,14 +39,28 @@ try:
     CYCLONEDX_AVAILABLE = True
 except ImportError:
     CYCLONEDX_AVAILABLE = False
-    # Define dummy classes for type hints when CycloneDX is not available
-    class Bom:
+    # Define dummy classes when CycloneDX is not available
+    class Bom:  # type: ignore
         pass
-    class Component:
+    class Component:  # type: ignore
         pass
-    class ComponentType:
+    class ComponentType:  # type: ignore
         pass
-    class ComponentScope:
+    class ComponentScope:  # type: ignore
+        pass
+    class HashType:  # type: ignore
+        pass
+    class ExternalReference:  # type: ignore
+        pass
+    class ExternalReferenceType:  # type: ignore
+        pass
+    class Tool:  # type: ignore
+        pass
+    class Property:  # type: ignore
+        pass
+    class JsonV1Dot6:  # type: ignore
+        pass
+    class JsonStrictValidator:  # type: ignore
         pass
 
 from .metadata import DLLMetadata
@@ -42,7 +71,7 @@ from .analyzer import AnalysisResult
 class CycloneDXExporter:
     """Exports DLL scan results to CycloneDX SBOM format."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the CycloneDX exporter."""
         if not CYCLONEDX_AVAILABLE:
             raise ImportError(
@@ -328,7 +357,7 @@ class CycloneDXExporter:
 
         # Generate JSON output
         json_outputter = JsonV1Dot6(bom)
-        json_output = json_outputter.output_as_string()
+        json_output: str = json_outputter.output_as_string()
 
         # Validate the output
         try:
@@ -358,7 +387,7 @@ class CycloneDXExporter:
         total_components = len(bom.components)
         
         # Count by architecture
-        architectures = {}
+        architectures: Dict[str, int] = {}
         signed_count = 0
         
         for component in bom.components:

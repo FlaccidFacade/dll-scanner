@@ -92,8 +92,8 @@ class DLLScanner:
         dll_paths = list(self._discover_dll_files(directory, recursive))
         self.logger.info(f"Found {len(dll_paths)} DLL files")
 
-        errors = []
-        dll_metadata_list = []
+        errors: List[str] = []
+        dll_metadata_list: List[DLLMetadata] = []
 
         if parallel and len(dll_paths) > 1:
             # Parallel processing
@@ -260,19 +260,19 @@ class DLLScanner:
             }
 
         # Architecture distribution
-        architectures = {}
+        architectures: Dict[str, int] = {}
         for dll in scan_result.dll_files:
             arch = dll.architecture or "Unknown"
             architectures[arch] = architectures.get(arch, 0) + 1
 
         # Company distribution
-        companies = {}
+        companies: Dict[str, int] = {}
         for dll in scan_result.dll_files:
             company = dll.company_name or "Unknown"
             companies[company] = companies.get(company, 0) + 1
 
         # Most common imports
-        import_counts = {}
+        import_counts: Dict[str, int] = {}
         for dll in scan_result.dll_files:
             if dll.imported_dlls:
                 for imported_dll in dll.imported_dlls:
