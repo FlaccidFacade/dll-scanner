@@ -2,65 +2,77 @@
 CycloneDX SBOM export functionality for DLL Scanner.
 """
 
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cyclonedx.model import (
-        Bom,
-        Component,
-        ComponentType,
-        HashType,
-        ExternalReference,
-        ExternalReferenceType,
-        Tool,
-        Property,
+    from cyclonedx.model.bom import Bom, Tool
+    from cyclonedx.model.component import (
+        Component, ComponentType, ComponentScope
     )
-    from cyclonedx.model.component import ComponentScope
+    from cyclonedx.model import (
+        HashType, ExternalReference, ExternalReferenceType, Property
+    )
     from cyclonedx.output.json import JsonV1Dot6
     from cyclonedx.validation.json import JsonStrictValidator
+    from cyclonedx.schema import SchemaVersion
+    from packageurl import PackageURL
 
 try:
-    from cyclonedx.model import (
-        Bom,
-        Component,
-        ComponentType,
-        HashType,
-        ExternalReference,
-        ExternalReferenceType,
-        Tool,
-        Property,
+    from cyclonedx.model.bom import Bom, Tool
+    from cyclonedx.model.component import (
+        Component, ComponentType, ComponentScope
     )
-    from cyclonedx.model.component import ComponentScope
+    from cyclonedx.model import (
+        HashType, ExternalReference, ExternalReferenceType, Property
+    )
     from cyclonedx.output.json import JsonV1Dot6
     from cyclonedx.validation.json import JsonStrictValidator
+    from cyclonedx.schema import SchemaVersion
+    from packageurl import PackageURL
     CYCLONEDX_AVAILABLE = True
 except ImportError:
     CYCLONEDX_AVAILABLE = False
     # Define dummy classes when CycloneDX is not available
+
     class Bom:  # type: ignore
         pass
+
     class Component:  # type: ignore
         pass
+
     class ComponentType:  # type: ignore
         pass
+
     class ComponentScope:  # type: ignore
         pass
+
     class HashType:  # type: ignore
         pass
+
     class ExternalReference:  # type: ignore
         pass
+
     class ExternalReferenceType:  # type: ignore
         pass
+
     class Tool:  # type: ignore
         pass
+
     class Property:  # type: ignore
         pass
+
     class JsonV1Dot6:  # type: ignore
         pass
+
     class JsonStrictValidator:  # type: ignore
+        pass
+
+    class PackageURL:  # type: ignore
+        pass
+
+    class SchemaVersion:  # type: ignore
         pass
 
 from .metadata import DLLMetadata
@@ -78,7 +90,7 @@ class CycloneDXExporter:
                 "CycloneDX library is not available. "
                 "Install with: pip install cyclonedx-bom"
             )
-        self.validator = JsonStrictValidator()
+        self.validator = JsonStrictValidator(SchemaVersion.V1_6)
 
     def export_to_cyclonedx(
         self,
@@ -100,11 +112,18 @@ class CycloneDXExporter:
             CycloneDX BOM object
         """
         # Create the main component (the project being analyzed)
+        project_purl = PackageURL(
+            type="generic",
+            name=project_name.replace(" ", "-").lower(),
+            version=project_version
+        )
+
         main_component = Component(
             type=ComponentType.APPLICATION,
             name=project_name,
             version=project_version,
-            bom_ref=f"pkg:generic/{project_name}@{project_version}",
+            bom_ref=str(project_purl),
+            purl=project_purl,
         )
 
         # Create BOM with metadata
@@ -118,7 +137,7 @@ class CycloneDXExporter:
             name="dll-scanner",
             version="0.1.0",
         )
-        bom.metadata.tools.add(dll_scanner_tool)
+        bom.metadata.tools.tools.add(dll_scanner_tool)
 
         # Add properties for scan metadata
         bom.metadata.properties.add(
@@ -127,10 +146,10 @@ class CycloneDXExporter:
         bom.metadata.properties.add(
             Property(name="scan.recursive", value=str(scan_result.recursive))
         )
+        # Add scan metadata properties
         bom.metadata.properties.add(
-            Property(
-                name="scan.duration_seconds", value=str(scan_result.scan_duration_seconds)
-            )
+            Property(name="scan.duration_seconds",
+                     value=str(scan_result.scan_duration_seconds))
         )
         bom.metadata.properties.add(
             Property(
@@ -174,14 +193,37 @@ class CycloneDXExporter:
         """
         # Create component name and version
         component_name = dll_metadata.file_name or "unknown.dll"
-        component_version = dll_metadata.file_version or "unknown"
+        component_version = (dll_metadata.file_version or
+                             dll_metadata.product_version or "unknown")
+
+        # Create a package URL for the DLL
+        # Use 'dll' as package type, file name as name, and version from
+        # metadata. Include namespace if we have a company name
+        namespace = None
+        if dll_metadata.company_name:
+            # Clean up company name for use as namespace (remove special
+            # chars, spaces)
+            namespace = (dll_metadata.company_name.replace(" ", "-")
+                         .replace(".", "-").replace(",", "").lower())
+
+        purl = PackageURL(
+            type="dll",
+            namespace=namespace,
+            name=component_name,
+            version=component_version,
+            qualifiers={
+                "arch": dll_metadata.architecture or "unknown",
+                "checksum": dll_metadata.checksum or "",
+            } if dll_metadata.architecture or dll_metadata.checksum else None
+        )
 
         # Create component with DLL-specific type
         component = Component(
             type=ComponentType.LIBRARY,
             name=component_name,
             version=component_version,
-            bom_ref=f"pkg:dll/{component_name}@{component_version}",
+            bom_ref=str(purl),  # Use the package URL as bom reference
+            purl=purl,  # Set the actual purl attribute
             scope=ComponentScope.REQUIRED,
         )
 
@@ -269,7 +311,8 @@ class CycloneDXExporter:
         if dll_metadata.imported_dlls:
             component.properties.add(
                 Property(
-                    name="dll.imported_dlls", value=", ".join(dll_metadata.imported_dlls)
+                    name="dll.imported_dlls",
+                    value=", ".join(dll_metadata.imported_dlls)
                 )
             )
 
@@ -277,9 +320,13 @@ class CycloneDXExporter:
             # Limit to first 50 functions to avoid overly large properties
             functions = dll_metadata.exported_functions[:50]
             if len(dll_metadata.exported_functions) > 50:
-                functions.append(f"... and {len(dll_metadata.exported_functions) - 50} more")
+                functions.append(
+                    f"... and {len(dll_metadata.exported_functions) - 50} "
+                    "more"
+                )
             component.properties.add(
-                Property(name="dll.exported_functions", value=", ".join(functions))
+                Property(name="dll.exported_functions",
+                         value=", ".join(functions))
             )
 
         # Add dependency analysis results if available
@@ -363,7 +410,8 @@ class CycloneDXExporter:
         try:
             validation_errors = self.validator.validate_str(json_output)
             if validation_errors:
-                print(f"Warning: CycloneDX validation found {len(validation_errors)} issues")
+                print(f"Warning: CycloneDX validation found "
+                      f"{len(validation_errors)} issues")
         except Exception as e:
             print(f"Warning: Could not validate CycloneDX output: {e}")
 
@@ -385,23 +433,25 @@ class CycloneDXExporter:
             Dictionary with component statistics
         """
         total_components = len(bom.components)
-        
+
         # Count by architecture
         architectures: Dict[str, int] = {}
         signed_count = 0
-        
+
         for component in bom.components:
             # Extract architecture from properties
             arch_prop = next(
-                (p for p in component.properties if p.name == "dll.architecture"), None
+                (p for p in component.properties
+                 if p.name == "dll.architecture"), None
             )
             if arch_prop:
                 arch = arch_prop.value
                 architectures[arch] = architectures.get(arch, 0) + 1
-            
+
             # Count signed DLLs
             signed_prop = next(
-                (p for p in component.properties if p.name == "dll.is_signed"), None
+                (p for p in component.properties
+                 if p.name == "dll.is_signed"), None
             )
             if signed_prop and signed_prop.value.lower() == "true":
                 signed_count += 1
@@ -412,5 +462,6 @@ class CycloneDXExporter:
             "signed_dlls": signed_count,
             "unsigned_dlls": total_components - signed_count,
             "bom_version": bom.version,
-            "generation_timestamp": bom.metadata.timestamp.isoformat() if bom.metadata.timestamp else None,
+            "generation_timestamp": (bom.metadata.timestamp.isoformat()
+                                     if bom.metadata.timestamp else None),
         }
