@@ -7,7 +7,7 @@ name = "dll-scanner"
 version = "0.1.0"
 description = "A Python tool to scan directories for DLL files and extract metadata"
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "DLL Scanner Contributors"}
 ]
