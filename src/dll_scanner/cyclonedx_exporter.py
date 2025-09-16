@@ -8,34 +8,22 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cyclonedx.model import (
-        Bom,
-        Component,
-        ComponentType,
-        HashType,
-        ExternalReference,
-        ExternalReferenceType,
-        Tool,
-        Property,
-    )
-    from cyclonedx.model.component import ComponentScope
+    from cyclonedx.model.bom import Bom, Tool
+    from cyclonedx.model.component import Component, ComponentType, ComponentScope
+    from cyclonedx.model import HashType, ExternalReference, ExternalReferenceType, Property
     from cyclonedx.output.json import JsonV1Dot6
     from cyclonedx.validation.json import JsonStrictValidator
+    from cyclonedx.schema import SchemaVersion
+    from packageurl import PackageURL
 
 try:
-    from cyclonedx.model import (
-        Bom,
-        Component,
-        ComponentType,
-        HashType,
-        ExternalReference,
-        ExternalReferenceType,
-        Tool,
-        Property,
-    )
-    from cyclonedx.model.component import ComponentScope
+    from cyclonedx.model.bom import Bom, Tool
+    from cyclonedx.model.component import Component, ComponentType, ComponentScope
+    from cyclonedx.model import HashType, ExternalReference, ExternalReferenceType, Property
     from cyclonedx.output.json import JsonV1Dot6
     from cyclonedx.validation.json import JsonStrictValidator
+    from cyclonedx.schema import SchemaVersion
+    from packageurl import PackageURL
     CYCLONEDX_AVAILABLE = True
 except ImportError:
     CYCLONEDX_AVAILABLE = False
@@ -62,6 +50,10 @@ except ImportError:
         pass
     class JsonStrictValidator:  # type: ignore
         pass
+    class PackageURL:  # type: ignore
+        pass
+    class SchemaVersion:  # type: ignore
+        pass
 
 from .metadata import DLLMetadata
 from .scanner import ScanResult
@@ -78,7 +70,7 @@ class CycloneDXExporter:
                 "CycloneDX library is not available. "
                 "Install with: pip install cyclonedx-bom"
             )
-        self.validator = JsonStrictValidator()
+        self.validator = JsonStrictValidator(SchemaVersion.V1_6)
 
     def export_to_cyclonedx(
         self,
@@ -100,11 +92,18 @@ class CycloneDXExporter:
             CycloneDX BOM object
         """
         # Create the main component (the project being analyzed)
+        project_purl = PackageURL(
+            type="generic",
+            name=project_name.replace(" ", "-").lower(),
+            version=project_version
+        )
+        
         main_component = Component(
             type=ComponentType.APPLICATION,
             name=project_name,
             version=project_version,
-            bom_ref=f"pkg:generic/{project_name}@{project_version}",
+            bom_ref=str(project_purl),
+            purl=project_purl,
         )
 
         # Create BOM with metadata
@@ -118,7 +117,7 @@ class CycloneDXExporter:
             name="dll-scanner",
             version="0.1.0",
         )
-        bom.metadata.tools.add(dll_scanner_tool)
+        bom.metadata.tools.tools.add(dll_scanner_tool)
 
         # Add properties for scan metadata
         bom.metadata.properties.add(
@@ -174,14 +173,34 @@ class CycloneDXExporter:
         """
         # Create component name and version
         component_name = dll_metadata.file_name or "unknown.dll"
-        component_version = dll_metadata.file_version or "unknown"
+        component_version = dll_metadata.file_version or dll_metadata.product_version or "unknown"
+
+        # Create a package URL for the DLL
+        # Use 'dll' as package type, file name as name, and version from metadata
+        # Include namespace if we have a company name
+        namespace = None
+        if dll_metadata.company_name:
+            # Clean up company name for use as namespace (remove special chars, spaces)
+            namespace = dll_metadata.company_name.replace(" ", "-").replace(".", "-").replace(",", "").lower()
+        
+        purl = PackageURL(
+            type="dll",
+            namespace=namespace,
+            name=component_name,
+            version=component_version,
+            qualifiers={
+                "arch": dll_metadata.architecture or "unknown",
+                "checksum": dll_metadata.checksum or "",
+            } if dll_metadata.architecture or dll_metadata.checksum else None
+        )
 
         # Create component with DLL-specific type
         component = Component(
             type=ComponentType.LIBRARY,
             name=component_name,
             version=component_version,
-            bom_ref=f"pkg:dll/{component_name}@{component_version}",
+            bom_ref=str(purl),  # Use the package URL as bom reference
+            purl=purl,  # Set the actual purl attribute
             scope=ComponentScope.REQUIRED,
         )
 
