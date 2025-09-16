@@ -5,7 +5,7 @@ DLL metadata extraction functionality.
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import json
 
 try:
@@ -28,7 +28,7 @@ class DLLMetadata:
     machine_type: Optional[str] = None
     architecture: Optional[str] = None
     subsystem: Optional[str] = None
-    dll_characteristics: Optional[List[str]] = None
+    dll_characteristics: List[str] = field(default_factory=list)
 
     # Version information
     product_name: Optional[str] = None
@@ -41,28 +41,20 @@ class DLLMetadata:
     original_filename: Optional[str] = None
 
     # Dependencies
-    imported_dlls: Optional[List[str]] = None
-    exported_functions: Optional[List[str]] = None
+    imported_dlls: List[str] = field(default_factory=list)
+    exported_functions: List[str] = field(default_factory=list)
 
     # Security and integrity
     is_signed: bool = False
     checksum: Optional[str] = None
 
     # Analysis metadata
-    scan_timestamp: datetime = None
-    analysis_errors: Optional[List[str]] = None
+    scan_timestamp: Optional[datetime] = None
+    analysis_errors: List[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.scan_timestamp is None:
             self.scan_timestamp = datetime.now()
-        if self.analysis_errors is None:
-            self.analysis_errors = []
-        if self.dll_characteristics is None:
-            self.dll_characteristics = []
-        if self.imported_dlls is None:
-            self.imported_dlls = []
-        if self.exported_functions is None:
-            self.exported_functions = []
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert metadata to dictionary for serialization."""
@@ -96,7 +88,7 @@ class DLLMetadata:
 class DLLMetadataExtractor:
     """Extracts metadata from DLL files using PE analysis."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         if pefile is None:
             raise ImportError(
                 "pefile library is required. Install with: pip install pefile"

@@ -72,7 +72,7 @@ class DependencyAnalyzer:
         # Compile regex patterns for better performance
         self._compile_patterns()
 
-    def _compile_patterns(self):
+    def _compile_patterns(self) -> None:
         """Compile regex patterns for dependency detection."""
         # C/C++ patterns
         self.loadlibrary_pattern = re.compile(
@@ -180,7 +180,7 @@ class DependencyAnalyzer:
 
     def _find_source_files(self, directory: Path, recursive: bool) -> List[Path]:
         """Find source code files to analyze."""
-        source_files = []
+        source_files: List[Path] = []
 
         if recursive:
             for ext in self.SOURCE_EXTENSIONS:
