@@ -275,7 +275,8 @@ The static code analyzer can detect DLL dependencies in the following languages:
 
 ## Requirements
 
-- Python 3.8+
+- Windows operating system
+- Python 3.9+
 - pefile >= 2023.2.7
 - click >= 8.0.0
 - rich >= 13.0.0
@@ -339,7 +340,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 pip install pefile
 ```
 
-**Permission denied errors on Windows**
+**Permission denied errors**
 - Run as administrator or ensure you have read permissions for the target directory
 
 **ImportError with optional dependencies**
