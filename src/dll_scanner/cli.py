@@ -37,7 +37,7 @@ def setup_logging(verbose: bool) -> logging.Logger:
 @click.version_option(version=__version__)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.pass_context
-def cli(ctx: click.Context, verbose: bool):
+def cli(ctx: click.Context, verbose: bool) -> None:
     """DLL Scanner - Extract metadata from DLL files and analyze dependencies."""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
@@ -110,7 +110,7 @@ def scan(
     cyclonedx: bool,
     project_name: str,
     project_version: str,
-):
+) -> None:
     """Scan a directory for DLL files and extract metadata."""
     console: Console = ctx.obj["console"]
     logger: logging.Logger = ctx.obj["logger"]
@@ -132,7 +132,7 @@ def scan(
 
     # Create progress callback
 
-    def progress_callback(message: str):
+    def progress_callback(message: str) -> None:
         if ctx.obj["verbose"]:
             console.print(f"[dim]{message}[/dim]")
 
@@ -245,7 +245,7 @@ def scan(
     help="Export metadata in CycloneDX SBOM format",
 )
 @click.pass_context
-def inspect(ctx: click.Context, dll_file: Path, output: Optional[Path], cyclonedx: bool):
+def inspect(ctx: click.Context, dll_file: Path, output: Optional[Path], cyclonedx: bool) -> None:
     """Inspect a single DLL file and display metadata."""
     console: Console = ctx.obj["console"]
     logger: logging.Logger = ctx.obj["logger"]
@@ -324,7 +324,7 @@ def analyze(
     source_directory: Path,
     dll_files: tuple[Path, ...],
     output: Optional[Path],
-):
+) -> None:
     """Analyze source code to confirm DLL dependencies."""
     console: Console = ctx.obj["console"]
     logger: logging.Logger = ctx.obj["logger"]
@@ -386,7 +386,7 @@ def analyze(
         sys.exit(1)
 
 
-def _display_scan_results(console: Console, scan_result: ScanResult):
+def _display_scan_results(console: Console, scan_result: ScanResult) -> None:
     """Display scan results in a formatted table."""
     console.print("\n[bold green]Scan completed![/bold green]")
     console.print(
@@ -427,7 +427,7 @@ def _display_scan_results(console: Console, scan_result: ScanResult):
         )
 
 
-def _display_dll_metadata(console: Console, metadata: DLLMetadata):
+def _display_dll_metadata(console: Console, metadata: DLLMetadata) -> None:
     """Display detailed metadata for a single DLL file."""
 
     # Basic information panel
@@ -504,7 +504,7 @@ def _display_dll_metadata(console: Console, metadata: DLLMetadata):
 
 def _display_dependency_analysis(
     console: Console, analysis_results: list[AnalysisResult]
-):
+) -> None:
     """Display dependency analysis results."""
     if not analysis_results:
         console.print("[yellow]No analysis results to display[/yellow]")
@@ -557,7 +557,7 @@ def _display_dependency_analysis(
             console.print(f"  • {result.dll_metadata.file_name}")
 
 
-def main():
+def main() -> None:
     """Main entry point for the CLI."""
     cli()
 
