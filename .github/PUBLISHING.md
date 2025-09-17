@@ -35,12 +35,16 @@ The workflow uses OIDC (OpenID Connect) trusted publishing for enhanced security
 ### test-pypi Job
 - Runs when manually triggered with `test-pypi` environment
 - Uses TestPyPI-specific OIDC audience (`testpypi`)
+- **Version checking**: Automatically checks if the current version already exists on TestPyPI
+- Skips upload if version already exists (prevents duplicate upload errors)
 - Publishes to https://test.pypi.org/legacy/
 - Uses `test-pypi` environment for protection
 
 ### pypi Job  
 - Runs on releases or manual trigger with `pypi` environment
 - Uses PyPI-specific OIDC audience (`pypi`)
+- **Version checking**: Automatically checks if the current version already exists on PyPI
+- Skips upload if version already exists (prevents duplicate upload errors)
 - Publishes to production PyPI
 - Uses `pypi` environment for protection
 
@@ -66,6 +70,7 @@ The workflow uses GitHub environments which should be configured with:
 - Uses OIDC trusted publishing (no API tokens required)
 - Runs in isolated environments 
 - Validates package before publishing
+- **Version checking**: Prevents duplicate uploads by checking if version already exists
 - Uses official PyPA publishing action
 - Proper audience configuration for each registry
 - Environment-based access controls
