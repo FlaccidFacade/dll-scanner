@@ -2,6 +2,8 @@
 
 A powerful Python tool for scanning directories to find DLL files, extracting comprehensive metadata, and performing static code analysis to confirm dependencies.
 
+https://app.codecov.io/gh/FlaccidFacade/dll-scanner
+
 ## Features
 
 - 🔍 **Recursive Directory Scanning**: Scan entire directory trees for DLL files
