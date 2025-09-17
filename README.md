@@ -309,9 +309,27 @@ flake8 src/
 
 ### Building and Publishing
 
+#### Automated Publishing (Recommended)
+
+The project uses GitHub Actions for automated publishing to PyPI:
+
+- **Automatic**: Publishing happens automatically when a new release is created on GitHub
+- **Manual**: You can manually trigger publishing using the "Publish to PyPI" workflow in the Actions tab
+
+The workflow file `.github/workflows/publish.yml` handles:
+- Building the package
+- Running quality checks
+- Publishing to PyPI or Test PyPI
+- Environment protection with the `pypi` environment
+
+#### Manual Publishing
+
 ```bash
 # Build package
 python -m build
+
+# Check package quality
+twine check dist/*
 
 # Upload to PyPI
 twine upload dist/*
