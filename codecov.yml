@@ -1,0 +1,36 @@
+coverage:
+  status:
+    project:
+      default:
+        # Set the overall project coverage target
+        target: 75%
+        threshold: 5%
+    patch:
+      default:
+        # Set the patch coverage target (coverage for new code)
+        target: 80%
+
+# Configure which paths to include/exclude from coverage
+coverage:
+  ignore:
+    - "tests/"
+    - "examples/"
+    - "setup.py"
+    - "*/__init__.py"
+
+# Comment configuration
+comment:
+  layout: "header, diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Ignore build processing errors
+parsers:
+  gcov:
+    branch_detection:
+      conditional: true
+      loop: true
+      method: false
+      macro: false
