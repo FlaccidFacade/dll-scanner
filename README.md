@@ -326,7 +326,6 @@ This project uses GitHub Actions to test on multiple platforms:
 - **Debian**: Additional Linux distribution testing using Docker containers
 
 While the primary DLL scanning functionality requires Windows, the test suite ensures code quality and maintainability across platforms.
-```
 
 ### Building and Publishing
 
