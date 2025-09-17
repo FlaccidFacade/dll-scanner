@@ -332,7 +332,7 @@ class TestCycloneDXExporter:
         )
 
         bom = exporter.export_to_cyclonedx(scan_result)
-        
+
         assert bom is not None
         assert bom.metadata.component.name == "DLL Analysis Project"
         assert len(bom.components) == 0
@@ -351,10 +351,10 @@ class TestCycloneDXExporter:
         )
 
         bom = exporter.export_to_cyclonedx(scan_result)
-        
+
         assert bom is not None
         assert len(bom.components) == 1
-        
+
         component = list(bom.components)[0]
         assert component.name == "sample.dll"
         assert component.version == "1.0.0"
@@ -373,7 +373,7 @@ class TestCycloneDXExporter:
         )
 
         json_output = exporter.export_to_json(scan_result)
-        
+
         assert json_output is not None
         assert "bomFormat" in json_output
         assert "CycloneDX" in json_output
@@ -382,7 +382,7 @@ class TestCycloneDXExporter:
     def test_components_have_package_urls(self, sample_dll_metadata):
         """Test that all components in exported JSON have purl (package URL) attributes."""
         import json
-        
+
         exporter = CycloneDXExporter()
         scan_result = ScanResult(
             scan_path="/test",
@@ -396,29 +396,39 @@ class TestCycloneDXExporter:
 
         json_output = exporter.export_to_json(scan_result)
         bom_data = json.loads(json_output)
-        
+
         # Check that components exist
         assert "components" in bom_data
         assert len(bom_data["components"]) == 1
-        
+
         # Check that each component has a purl attribute
         for component in bom_data["components"]:
-            assert "purl" in component, f"Component {component.get('name', 'unknown')} missing purl attribute"
-            assert component["purl"] is not None, f"Component {component.get('name', 'unknown')} has null purl"
-            assert component["purl"].startswith("pkg:"), f"Component purl should start with 'pkg:': {component['purl']}"
-        
+            assert (
+                "purl" in component
+            ), f"Component {component.get('name', 'unknown')} missing purl attribute"
+            assert (
+                component["purl"] is not None
+            ), f"Component {component.get('name', 'unknown')} has null purl"
+            assert component["purl"].startswith(
+                "pkg:"
+            ), f"Component purl should start with 'pkg:': {component['purl']}"
+
         # Check that the main metadata component also has a purl
         assert "metadata" in bom_data
         assert "component" in bom_data["metadata"]
         metadata_component = bom_data["metadata"]["component"]
         assert "purl" in metadata_component, "Main component missing purl attribute"
         assert metadata_component["purl"] is not None, "Main component has null purl"
-        assert metadata_component["purl"].startswith("pkg:"), f"Main component purl should start with 'pkg:': {metadata_component['purl']}"
-        
+        assert metadata_component["purl"].startswith(
+            "pkg:"
+        ), f"Main component purl should start with 'pkg:': {metadata_component['purl']}"
+
         # Verify specific purl format for DLL component
         dll_component = bom_data["components"][0]
         expected_purl_start = "pkg:dll/test-company/sample.dll@1.0.0"
-        assert dll_component["purl"].startswith(expected_purl_start), f"DLL component purl should start with '{expected_purl_start}': {dll_component['purl']}"
+        assert dll_component["purl"].startswith(
+            expected_purl_start
+        ), f"DLL component purl should start with '{expected_purl_start}': {dll_component['purl']}"
 
     def test_component_summary(self, sample_dll_metadata):
         """Test getting component summary from BOM."""
@@ -435,7 +445,7 @@ class TestCycloneDXExporter:
 
         bom = exporter.export_to_cyclonedx(scan_result)
         summary = exporter.get_component_summary(bom)
-        
+
         assert summary["total_components"] == 1
         assert "architectures" in summary
         assert "signed_dlls" in summary
