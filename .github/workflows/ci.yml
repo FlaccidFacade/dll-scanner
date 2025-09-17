@@ -91,34 +91,6 @@ jobs:
         name: dist
         path: dist/
 
-  publish:
-    name: "Publish to PyPI"
-    needs: [test, build]
-    runs-on: windows-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
-    
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
-        path: dist/
-
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        pip install twine
-        twine upload dist/*
-
   security:
     name: "Security Checks"
     runs-on: windows-latest
