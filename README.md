@@ -277,13 +277,19 @@ The static code analyzer can detect DLL dependencies in the following languages:
 
 ## Requirements
 
-- Windows operating system
+### Runtime Requirements
+- **Windows operating system** (for DLL scanning functionality)
 - Python 3.9+
 - pefile >= 2023.2.7
 - click >= 8.0.0
 - rich >= 13.0.0
 - pathlib-mate >= 1.0.0
 - cyclonedx-bom >= 4.0.0 (for CycloneDX SBOM export)
+
+### Development and Testing
+- **Cross-platform support**: Tests run on Windows, Ubuntu, and Debian
+- While the primary functionality requires Windows DLLs, the codebase is designed to be maintainable across platforms
+- Static code analysis features work on any platform
 
 ## Development
 
@@ -299,6 +305,9 @@ pip install -e ".[dev]"
 # Run tests
 pytest
 
+# Run tests with coverage
+pytest --cov=dll_scanner
+
 # Format code
 black src/ tests/
 
@@ -307,6 +316,16 @@ mypy src/
 
 # Linting
 flake8 src/
+```
+
+### Cross-Platform Testing
+
+This project uses GitHub Actions to test on multiple platforms:
+- **Windows**: Full functionality testing with actual DLL files
+- **Ubuntu**: Core functionality and code quality testing
+- **Debian**: Additional Linux distribution testing using Docker containers
+
+While the primary DLL scanning functionality requires Windows, the test suite ensures code quality and maintainability across platforms.
 ```
 
 ### Building and Publishing
