@@ -4,7 +4,7 @@ This document describes the automated publishing workflow for the dll-scanner pa
 
 ## Overview
 
-The `publish.yml` workflow automates the process of building and publishing the dll-scanner package to PyPI. It replaces the manual publishing process and ensures consistent, secure releases.
+The `publish.yml` workflow automates the process of building and publishing the dll-scanner package to PyPI using OIDC trusted publishing. It replaces the manual publishing process and ensures consistent, secure releases.
 
 ## Workflow Details
 
@@ -12,37 +12,63 @@ The `publish.yml` workflow automates the process of building and publishing the 
 - **Repository**: FlaccidFacade/dll-scanner
 - **Package Name**: dll-scanner
 - **Publisher**: GitHub Actions
-- **Environment**: pypi
+- **Environment**: pypi / test-pypi
 
 ## Triggers
 
 The workflow can be triggered in two ways:
 
-1. **Automatic**: When a new release is published on GitHub
+1. **Automatic**: When a new release is published on GitHub (publishes to PyPI)
 2. **Manual**: Using the workflow dispatch option with choice of environment (PyPI or Test PyPI)
+
+## OIDC Trusted Publishing
+
+The workflow uses OIDC (OpenID Connect) trusted publishing for enhanced security:
+
+- **PyPI audience**: Uses `audience=pypi` for production PyPI
+- **TestPyPI audience**: Uses `audience=testpypi` for Test PyPI
+- **No long-lived tokens**: Eliminates the need for API token secrets
+- **Automatic token minting**: Dynamically generates OIDC tokens for each publish
+
+## Jobs
+
+### test-pypi Job
+- Runs when manually triggered with `test-pypi` environment
+- Uses TestPyPI-specific OIDC audience (`testpypi`)
+- Publishes to https://test.pypi.org/legacy/
+- Uses `test-pypi` environment for protection
+
+### pypi Job  
+- Runs on releases or manual trigger with `pypi` environment
+- Uses PyPI-specific OIDC audience (`pypi`)
+- Publishes to production PyPI
+- Uses `pypi` environment for protection
 
 ## Requirements
 
-### Secrets Required
+### OIDC Configuration
 
-The workflow requires the following secrets to be configured in the repository:
+The workflow requires OIDC trusted publishing to be configured:
 
-- `PYPI_API_TOKEN`: API token for publishing to PyPI
-- `TEST_PYPI_API_TOKEN`: API token for publishing to Test PyPI (optional, for testing)
+1. **PyPI Configuration**: Set up trusted publisher on PyPI for this repository
+2. **TestPyPI Configuration**: Set up trusted publisher on TestPyPI for testing
 
 ### Environment Protection
 
-The workflow uses the `pypi` environment which should be configured with:
+The workflow uses GitHub environments which should be configured with:
+- `pypi` environment for production releases
+- `test-pypi` environment for testing
 - Protection rules for production releases
 - Required reviewers (if desired)
-- Environment-specific secrets
 
 ## Security Features
 
-- Uses trusted publishing with OpenID Connect (OIDC)
-- Runs in an isolated environment
+- Uses OIDC trusted publishing (no API tokens required)
+- Runs in isolated environments 
 - Validates package before publishing
 - Uses official PyPA publishing action
+- Proper audience configuration for each registry
+- Environment-based access controls
 
 ## Usage
 
@@ -53,12 +79,20 @@ The workflow uses the `pypi` environment which should be configured with:
 3. Create a release on GitHub using the tag
 4. The workflow will automatically trigger and publish to PyPI
 
-### Manual Publishing
+### Manual Publishing to TestPyPI
 
 1. Go to the "Actions" tab in the repository
 2. Select "Publish to PyPI" workflow
 3. Click "Run workflow"
-4. Choose the environment (pypi or test-pypi)
+4. Choose `test-pypi` environment
+5. Click "Run workflow"
+
+### Manual Publishing to PyPI
+
+1. Go to the "Actions" tab in the repository
+2. Select "Publish to PyPI" workflow
+3. Click "Run workflow"
+4. Choose `pypi` environment
 5. Click "Run workflow"
 
 ## Package Information
@@ -67,3 +101,4 @@ The workflow uses the `pypi` environment which should be configured with:
 - **Current Version**: 0.1.0
 - **Description**: A Python tool to scan directories for DLL files and extract metadata
 - **PyPI URL**: https://pypi.org/p/dll-scanner
+- **TestPyPI URL**: https://test.pypi.org/p/dll-scanner

@@ -311,7 +311,7 @@ flake8 src/
 
 #### Automated Publishing (Recommended)
 
-The project uses GitHub Actions for automated publishing to PyPI:
+The project uses GitHub Actions for automated publishing to PyPI with OIDC trusted publishing:
 
 - **Automatic**: Publishing happens automatically when a new release is created on GitHub
 - **Manual**: You can manually trigger publishing using the "Publish to PyPI" workflow in the Actions tab
@@ -319,8 +319,11 @@ The project uses GitHub Actions for automated publishing to PyPI:
 The workflow file `.github/workflows/publish.yml` handles:
 - Building the package
 - Running quality checks
-- Publishing to PyPI or Test PyPI
-- Environment protection with the `pypi` environment
+- OIDC token minting for secure authentication
+- Publishing to PyPI or Test PyPI with proper audience configuration
+- Environment protection with `pypi` and `test-pypi` environments
+
+**Security**: Uses OIDC trusted publishing - no API tokens required!
 
 #### Manual Publishing
 

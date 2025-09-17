@@ -15,14 +15,15 @@ on:
         - test-pypi
 
 jobs:
-  publish:
-    name: "Publish dll-scanner to PyPI"
+  test-pypi:
+    name: "Test publish to TestPyPI"
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'test-pypi'
     environment: 
-      name: pypi
-      url: https://pypi.org/p/dll-scanner
+      name: test-pypi
+      url: https://test.pypi.org/p/dll-scanner
     permissions:
-      id-token: write  # Required for trusted publishing
+      id-token: write
       contents: read
     
     steps:
@@ -37,23 +38,70 @@ jobs:
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build twine
+        pip install -U build
 
     - name: Build package
       run: python -m build
 
     - name: Check package
-      run: twine check dist/*
+      run: python -m twine check dist/*
 
-    - name: Publish to PyPI
-      if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'pypi')
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Mint OIDC token for TestPyPI
+      id: mint-token
+      run: |
+        # retrieve the ambient OIDC token
+        resp=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=testpypi")
+        oidc_token=$(echo "$resp" | jq -r '.value')
+        echo "oidc-token=$oidc_token" >> $GITHUB_OUTPUT
 
-    - name: Publish to Test PyPI
-      if: github.event_name == 'workflow_dispatch' && inputs.environment == 'test-pypi'
+    - name: Publish to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        attestations: true
+
+  pypi:
+    name: "Publish to PyPI"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'pypi')
+    environment: 
+      name: pypi
+      url: https://pypi.org/p/dll-scanner
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U build
+
+    - name: Build package
+      run: python -m build
+
+    - name: Check package
+      run: python -m twine check dist/*
+
+    - name: Mint OIDC token for PyPI
+      id: mint-token
+      run: |
+        # retrieve the ambient OIDC token
+        resp=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi")
+        oidc_token=$(echo "$resp" | jq -r '.value')
+        echo "oidc-token=$oidc_token" >> $GITHUB_OUTPUT
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        attestations: true
