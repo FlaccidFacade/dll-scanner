@@ -9,9 +9,6 @@ coverage:
       default:
         # Set the patch coverage target (coverage for new code)
         target: 80%
-
-# Configure which paths to include/exclude from coverage
-coverage:
   ignore:
     - "tests/"
     - "examples/"
