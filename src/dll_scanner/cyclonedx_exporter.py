@@ -325,12 +325,11 @@ class CycloneDXExporter:
                     name="dll.original_filename", value=dll_metadata.original_filename
                 )
             )
-        
+
         if dll_metadata.copyright:
             component.properties.add(
                 Property(name="dll.copyright", value=dll_metadata.copyright)
             )
-
 
         if dll_metadata.legal_copyright:
             component.properties.add(
