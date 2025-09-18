@@ -307,7 +307,7 @@ class TestCLI:
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        assert "0.2.0" in result.output
 
 
 class TestCycloneDXExporter:
@@ -449,6 +449,44 @@ class TestCycloneDXExporter:
         assert summary["total_components"] == 1
         assert "architectures" in summary
         assert "signed_dlls" in summary
+
+    def test_file_version_property_in_sbom(self):
+        """Test that file_version is included as a property in the SBOM."""
+        # Create a DLL metadata with file_version
+        dll_metadata = DLLMetadata(
+            file_path="/test/versioned.dll",
+            file_name="versioned.dll",
+            file_size=32768,
+            modification_time=None,
+            architecture="x86",
+            file_version="2.1.0.123",
+            product_version="2.1.0",
+            legal_copyright="Copyright (C) 2025 Test Corp",
+        )
+
+        exporter = CycloneDXExporter()
+        scan_result = ScanResult(
+            scan_path="/test",
+            recursive=True,
+            dll_files=[dll_metadata],
+            total_files_scanned=1,
+            total_dlls_found=1,
+            scan_duration_seconds=0.5,
+            errors=[],
+        )
+
+        # Export to JSON to check the properties
+        json_output = exporter.export_to_json(scan_result)
+
+        # Verify that the JSON contains file_version property
+        assert "dll.file_version" in json_output
+        assert "2.1.0.123" in json_output
+
+        # Also verify product_version and legal_copyright are still there
+        assert "dll.product_version" in json_output
+        assert "2.1.0" in json_output
+        assert "dll.legal_copyright" in json_output
+        assert "Copyright (C) 2025 Test Corp" in json_output
 
 
 # Integration tests

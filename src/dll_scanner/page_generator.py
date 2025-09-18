@@ -343,7 +343,6 @@ class PageGenerator:
                 cast(Dict[str, List[str]], current_entry["sections"])[
                     current_section
                 ].append(item)
-
         if current_entry:
             entries.append(current_entry)
 
