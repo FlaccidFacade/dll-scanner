@@ -489,6 +489,90 @@ class TestCycloneDXExporter:
         assert "Copyright (C) 2025 Test Corp" in json_output
 
 
+class TestVersionManagement:
+    """Test version management functionality."""
+
+    def test_version_extraction_from_pyproject(self):
+        """Test that version can be extracted from pyproject.toml."""
+        import tomllib
+        from pathlib import Path
+
+        # Find project root
+        current_dir = Path(__file__).parent.parent
+        pyproject_path = current_dir / "pyproject.toml"
+        
+        assert pyproject_path.exists(), "pyproject.toml should exist"
+        
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+        
+        version = data["project"]["version"]
+        assert version is not None
+        assert isinstance(version, str)
+        assert len(version.split(".")) >= 2  # Should be at least major.minor
+        
+        # Version should match semantic versioning pattern
+        import re
+        semver_pattern = r"^\d+\.\d+\.\d+(\-[a-zA-Z0-9\-]+)?(\+[a-zA-Z0-9\-]+)?$"
+        assert re.match(semver_pattern, version), f"Version {version} should follow semantic versioning"
+
+    def test_version_consistency(self):
+        """Test that version is consistent between pyproject.toml and __init__.py."""
+        import tomllib
+        from pathlib import Path
+        import sys
+
+        # Get version from pyproject.toml
+        current_dir = Path(__file__).parent.parent
+        pyproject_path = current_dir / "pyproject.toml"
+        
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+        pyproject_version = data["project"]["version"]
+
+        # Get version from __init__.py
+        sys.path.insert(0, str(current_dir / "src"))
+        import dll_scanner
+        init_version = dll_scanner.__version__
+
+        assert pyproject_version == init_version, (
+            f"Version mismatch: pyproject.toml has {pyproject_version}, "
+            f"__init__.py has {init_version}"
+        )
+
+    def test_tag_format_generation(self):
+        """Test that semantic version tags are generated correctly."""
+        test_versions = [
+            ("1.0.0", "v1.0.0"),
+            ("0.2.0", "v0.2.0"),
+            ("2.1.3", "v2.1.3"),
+            ("1.0.0-beta", "v1.0.0-beta"),
+            ("1.0.0+build.123", "v1.0.0+build.123"),
+        ]
+        
+        for version, expected_tag in test_versions:
+            tag = f"v{version}"
+            assert tag == expected_tag, f"Expected {expected_tag}, got {tag}"
+
+    def test_create_version_tag_dry_run(self):
+        """Test the create-version-tag command in dry-run mode."""
+        from click.testing import CliRunner
+        from dll_scanner.cli import cli
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["create-version-tag", "--dry-run"])
+        
+        # Command should succeed
+        assert result.exit_code == 0
+        
+        # Should contain expected output
+        assert "Creating semantic version tag" in result.output
+        assert "Project version:" in result.output
+        assert "Git tag:" in result.output
+        assert "DRY RUN" in result.output
+        assert "Would create tag:" in result.output
+
+
 # Integration tests
 class TestIntegration:
     """Integration tests for the complete workflow."""

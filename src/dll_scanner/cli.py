@@ -718,6 +718,179 @@ def generate_pages(
         sys.exit(1)
 
 
+@cli.command()
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Force tag creation even if it already exists",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be done without creating the tag",
+)
+@click.pass_context
+def create_version_tag(
+    ctx: click.Context,
+    force: bool,
+    dry_run: bool,
+) -> None:
+    """Create a semantic version Git tag based on the project version."""
+    console: Console = ctx.obj["console"]
+    logger: logging.Logger = ctx.obj["logger"]
+
+    try:
+        import subprocess
+        import tomllib
+        from pathlib import Path
+
+        console.print("[bold blue]🏷️  Creating semantic version tag...[/bold blue]")
+
+        # Extract version from pyproject.toml
+        project_root = Path(__file__).parent.parent.parent
+        pyproject_path = project_root / "pyproject.toml"
+
+        if not pyproject_path.exists():
+            console.print("[bold red]❌ Error: pyproject.toml not found[/bold red]")
+            sys.exit(1)
+
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+
+        version = data["project"]["version"]
+        tag = f"v{version}"
+
+        console.print(f"📦 Project version: [bold]{version}[/bold]")
+        console.print(f"🏷️  Git tag: [bold]{tag}[/bold]")
+
+        # Verify version consistency
+        from . import __version__
+
+        if version != __version__:
+            console.print(
+                f"[bold red]❌ Version mismatch![/bold red] "
+                f"pyproject.toml: {version}, __init__.py: {__version__}"
+            )
+            sys.exit(1)
+
+        console.print("✅ Version consistency verified")
+
+        # Check if tag exists
+        try:
+            result = subprocess.run(
+                ["git", "tag", "-l"],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=project_root,
+            )
+            existing_tags = (
+                result.stdout.strip().split("\n") if result.stdout.strip() else []
+            )
+            tag_exists = tag in existing_tags
+        except subprocess.CalledProcessError:
+            console.print(
+                "[bold yellow]⚠️  Warning: Could not check existing tags[/bold yellow]"
+            )
+            tag_exists = False
+
+        if tag_exists:
+            if force:
+                console.print(
+                    f"[bold yellow]⚠️  Tag {tag} already exists, "
+                    f"but --force flag is set[/bold yellow]"
+                )
+            else:
+                console.print(
+                    f"[bold yellow]⚠️  Tag {tag} already exists. "
+                    f"Use --force to recreate it.[/bold yellow]"
+                )
+                return
+        else:
+            console.print(f"✅ Tag {tag} does not exist")
+
+        if dry_run:
+            console.print("[bold blue]🔍 DRY RUN - No changes will be made[/bold blue]")
+            if tag_exists and force:
+                console.print(f"Would delete existing tag: {tag}")
+            console.print(f"Would create tag: {tag}")
+            console.print(f"Would push tag: {tag}")
+            return
+
+        # Configure git (if needed)
+        try:
+            subprocess.run(
+                ["git", "config", "user.name"],
+                capture_output=True,
+                check=True,
+                cwd=project_root,
+            )
+        except subprocess.CalledProcessError:
+            console.print("[bold yellow]⚠️  Git user.name not configured[/bold yellow]")
+            console.print("Please configure git with: git config user.name 'Your Name'")
+            sys.exit(1)
+
+        # Delete existing tag if force is set
+        if tag_exists and force:
+            console.print(f"🗑️  Deleting existing tag: {tag}")
+            try:
+                subprocess.run(
+                    ["git", "tag", "-d", tag],
+                    check=True,
+                    cwd=project_root,
+                )
+                # Try to delete from remote (may fail if remote doesn't exist)
+                subprocess.run(
+                    ["git", "push", "origin", "--delete", tag],
+                    capture_output=True,
+                    cwd=project_root,
+                )
+            except subprocess.CalledProcessError as e:
+                logger.debug(f"Failed to delete remote tag: {e}")
+
+        # Create the tag
+        console.print(f"🏷️  Creating tag: {tag}")
+        tag_message = (
+            f"Release version {version}\n\n"
+            f"This tag was created using dll-scanner create-version-tag command."
+        )
+
+        subprocess.run(
+            ["git", "tag", "-a", tag, "-m", tag_message],
+            check=True,
+            cwd=project_root,
+        )
+
+        # Push the tag
+        console.print(f"📤 Pushing tag to origin: {tag}")
+        try:
+            subprocess.run(
+                ["git", "push", "origin", tag],
+                check=True,
+                cwd=project_root,
+            )
+            console.print(
+                f"[bold green]✅ Successfully created and pushed tag: "
+                f"{tag}[/bold green]"
+            )
+        except subprocess.CalledProcessError:
+            console.print(
+                "[bold yellow]⚠️  Tag created locally but failed to "
+                "push to remote[/bold yellow]"
+            )
+            console.print(f"You may need to push manually with: git push origin {tag}")
+
+    except ImportError:
+        console.print(
+            "[bold red]❌ Error: Python 3.11+ required for tomllib[/bold red]"
+        )
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Tag creation failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        sys.exit(1)
+
+
 def main() -> None:
     """Main entry point for the CLI."""
     cli()
