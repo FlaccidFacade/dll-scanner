@@ -341,7 +341,7 @@ class CycloneDXExporter:
             component.legal_copyright = dll_metadata.legal_copyright
 
         # Add security/signing properties
-        if dll_metadata.is_signed:
+        if dll_metadata.is_signed is not None:
             component.properties.add(
                 Property(name="dll.is_signed", value=str(dll_metadata.is_signed))
             )
