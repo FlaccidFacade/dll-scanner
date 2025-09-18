@@ -2,7 +2,10 @@
 
 A powerful Python tool for scanning directories to find DLL files, extracting comprehensive metadata, and performing static code analysis to confirm dependencies.
 
-https://app.codecov.io/gh/FlaccidFacade/dll-scanner
+[![CI/CD Pipeline](https://github.com/FlaccidFacade/dll-scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/FlaccidFacade/dll-scanner/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/FlaccidFacade/dll-scanner/branch/main/graph/badge.svg)](https://codecov.io/gh/FlaccidFacade/dll-scanner)
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
@@ -400,6 +403,24 @@ This project uses GitHub Actions to test on multiple platforms:
 - **Debian**: Additional Linux distribution testing using Docker containers
 
 While the primary DLL scanning functionality requires Windows, the test suite ensures code quality and maintainability across platforms.
+
+### Coverage Reporting
+
+The project uses [Codecov](https://codecov.io/gh/FlaccidFacade/dll-scanner) for coverage reporting and analysis:
+
+- **Coverage reports** are automatically generated on every CI run
+- **Coverage badges** show current test coverage status
+- **Detailed reports** available at https://app.codecov.io/gh/FlaccidFacade/dll-scanner
+
+```bash
+# Generate coverage report locally
+pytest --cov=dll_scanner --cov-report=html --cov-report=term-missing
+
+# View HTML coverage report
+open htmlcov/index.html  # macOS
+start htmlcov/index.html  # Windows
+xdg-open htmlcov/index.html  # Linux
+```
 
 ### Building and Publishing
 

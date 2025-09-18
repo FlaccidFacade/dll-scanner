@@ -55,7 +55,7 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ -v --cov=dll_scanner --cov-report=xml --cov-report=term-missing
+        pytest tests/ -v --cov=dll_scanner --cov-report=xml --cov-report=term-missing --junit-xml=test-results.xml
 
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
@@ -63,6 +63,12 @@ jobs:
       with:
         file: ./coverage.xml
         fail_ci_if_error: true
+
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   test-debian:
     name: "Test on Debian Python ${{ matrix.python-version }}"
