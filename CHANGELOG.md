@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-01-XX
+
+### Added
+- Version information is fully extracted and included in CycloneDX SBOM exports
+- Version data (file_version, product_version, legal_copyright) is included in component properties
+- Version information is used in component version field and PURL attributes
+- Enhanced SBOM export with comprehensive version metadata
+
+### Changed
+- Project version bumped to 0.3.0 for PyPI release
+
 ## [0.1.0] - 2024-01-XX
 
 ### Added
