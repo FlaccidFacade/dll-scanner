@@ -118,51 +118,18 @@ After making changes, ALWAYS test at least one complete end-to-end scenario:
 ## Common Tasks
 
 ### Repository Structure
-```
-dll-scanner/
-├── .github/                 # GitHub workflows and configuration
-│   └── workflows/
-│       ├── ci.yml          # CI/CD pipeline (tests, linting, building)
-│       └── publish.yml     # PyPI publishing workflow
-├── src/dll_scanner/        # Main source code
-│   ├── __init__.py         # Package initialization and exports
-│   ├── cli.py              # Command-line interface implementation
-│   ├── scanner.py          # Core DLL scanning functionality
-│   ├── metadata.py         # DLL metadata extraction and representation
-│   ├── analyzer.py         # Dependency analysis and static code scanning
-│   └── cyclonedx_exporter.py # CycloneDX SBOM export functionality
-├── tests/                  # Test suite
-│   ├── __init__.py
-│   └── test_dll_scanner.py # Comprehensive test coverage
-├── examples/               # Usage examples and test scripts
-│   └── test_usage.sh       # Example script demonstrating CLI usage
-├── pyproject.toml          # Project configuration, dependencies, build settings
-├── README.md               # User documentation and usage examples
-├── CONTRIBUTING.md         # Developer guidelines and setup instructions
-├── CHANGELOG.md            # Version history and release notes
-└── LICENSE                 # MIT license
-```
+src/dll_scanner/ - Main source code with CLI, scanner, metadata extraction, dependency analysis
+tests/ - Test suite (pytest, runs in ~5 seconds)
+.github/workflows/ - CI/CD (ci.yml for testing, publish.yml for PyPI)
+pyproject.toml - Project config, dependencies, build settings
+examples/test_usage.sh - Working example script for testing CLI
 
-### Key Features and Commands
-- **Directory Scanning:** Recursively scan directories for DLL files
-- **Metadata Extraction:** Extract PE metadata including architecture, version info, imports/exports
-- **Dependency Analysis:** Static code analysis to confirm DLL usage in source code
-- **Multiple Output Formats:** JSON output and CycloneDX SBOM format
-- **Cross-Platform Development:** Tests run on Windows, Ubuntu, and Debian
-- **Rich CLI Interface:** Progress bars, tables, and colored output using Rich library
-
-### Dependencies and Requirements
-- **Python 3.9+** (supports 3.9, 3.10, 3.11, 3.12)
-- **Runtime:** pefile, click, rich, pathlib-mate, cyclonedx-bom
-- **Development:** pytest, pytest-cov, black, flake8, mypy, twine, build
-- **Platform Notes:** Primary DLL functionality requires Windows, but development and testing work cross-platform
-
-### CI/CD Pipeline
-The repository uses GitHub Actions with the following workflows:
-- **ci.yml:** Runs tests on multiple Python versions and platforms (Windows, Ubuntu, Debian)
-- **publish.yml:** Automated PyPI publishing using OIDC trusted publishing
-- **Quality Checks:** Formatting (Black), linting (flake8), type checking (mypy), testing (pytest)
-- **Security:** Bandit security analysis and Safety dependency checking
+### Key Files for Development
+- `src/dll_scanner/cli.py` - Command-line interface (main entry point)
+- `src/dll_scanner/scanner.py` - Core DLL scanning logic
+- `src/dll_scanner/metadata.py` - PE metadata extraction
+- `src/dll_scanner/analyzer.py` - Dependency analysis engine
+- `tests/test_dll_scanner.py` - Comprehensive test coverage
 
 ### Common Issues and Solutions
 - **Build fails with network timeouts (HTTPSConnectionPool timeout):** This is common in CI environments due to PyPI network issues. The build will work locally or when network is stable. Do not rely on `python -m build` for validation - use the installed package instead.
