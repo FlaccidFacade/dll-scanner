@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLL Scanner - Sample Project Scan Results</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="nav-brand">
+                    <h1>🔍 DLL Scanner</h1>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../scan-results.html">Scan Results</a></li>
+                    <li><a href="../changelog.html">Changelog</a></li>
+                    <li><a href="https://github.com/FlaccidFacade/dll-scanner" target="_blank">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="page-header">
+                <h2>📊 Scan Results: Sample Project Scan</h2>
+                <p>Generated on 2025-09-18 at 01:52:49</p>
+            </div>
+
+            <!-- Quick Stats -->
+            <section class="summary-section">
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-icon">📁</div>
+                        <div class="summary-content">
+                            <h3>150</h3>
+                            <p>Files Scanned</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">🔧</div>
+                        <div class="summary-content">
+                            <h3>8</h3>
+                            <p>DLLs Found</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">⏱️</div>
+                        <div class="summary-content">
+                            <h3>2.3s</h3>
+                            <p>Scan Duration</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">🛡️</div>
+                        <div class="summary-content">
+                            <h3>5</h3>
+                            <p>Signed DLLs</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Architecture Breakdown -->
+            <section class="stats-section">
+                <div class="container">
+                    <h3>Architecture Distribution</h3>
+                    <div class="stats-grid">
+                        
+                <div class="stat-item">
+                    <div class="stat-value">6</div>
+                    <div class="stat-label">x64</div>
+                </div>
+            
+                <div class="stat-item">
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">x86</div>
+                </div>
+            
+                    </div>
+                </div>
+            </section>
+
+            <!-- Actions -->
+            <section class="actions-section">
+                <div class="container">
+                    <h3>Actions</h3>
+                    <div class="action-buttons">
+                        <a href="../scan-results.html?url=data/sample_project_scan_results.json" class="btn btn-primary">
+                            Open in Interactive Viewer
+                        </a>
+                        <a href="data/sample_project_scan_results.json" class="btn btn-outline" download>
+                            Download JSON Data
+                        </a>
+                        <button onclick="navigator.share({title: 'DLL Scanner Results - Sample Project Scan', url: window.location.href})" class="btn btn-outline">
+                            Share Results
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2024 DLL Scanner Contributors. Licensed under MIT License.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/issues" target="_blank">Report Issues</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/LICENSE" target="_blank">License</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+    <style>
+        .stats-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        .actions-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+    </style>
+</body>
+</html>

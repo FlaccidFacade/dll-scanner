@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLL Scanner - Home</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="nav-brand">
+                    <h1>🔍 DLL Scanner</h1>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="scan-results.html">Scan Results</a></li>
+                    <li><a href="changelog.html">Changelog</a></li>
+                    <li><a href="https://github.com/FlaccidFacade/dll-scanner" target="_blank">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h2>Powerful DLL File Analysis Tool</h2>
+                    <p>A Python tool for scanning directories to find DLL files, extracting comprehensive metadata, and performing static code analysis to confirm dependencies.</p>
+                    <div class="hero-actions">
+                        <a href="https://github.com/FlaccidFacade/dll-scanner" class="btn btn-primary" target="_blank">View on GitHub</a>
+                        <a href="#features" class="btn btn-secondary">Learn More</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h3>Features</h3>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📁</div>
+                        <h4>Directory Scanning</h4>
+                        <p>Recursive directory scanning for DLL files with parallel processing support</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h4>Metadata Extraction</h4>
+                        <p>Comprehensive PE metadata extraction including architecture, version, and security info</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔗</div>
+                        <h4>Dependency Analysis</h4>
+                        <p>Static code analysis to confirm dependencies across multiple programming languages</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <h4>Security Insights</h4>
+                        <p>Digital signature validation and security characteristics analysis</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📄</div>
+                        <h4>Export Formats</h4>
+                        <p>JSON output and CycloneDX SBOM format support for integration workflows</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h4>Performance</h4>
+                        <p>Multi-threaded processing with configurable worker pools for optimal speed</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="getting-started">
+            <div class="container">
+                <h3>Getting Started</h3>
+                <div class="getting-started-content">
+                    <div class="install-section">
+                        <h4>📦 Installation</h4>
+                        <div class="code-block">
+                            <pre><code># From PyPI
+pip install dll-scanner
+
+# From Source
+git clone https://github.com/FlaccidFacade/dll-scanner.git
+cd dll-scanner
+pip install -e .</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="usage-section">
+                        <h4>🚀 Quick Usage</h4>
+                        <div class="code-block">
+                            <pre><code># Basic directory scan
+dll-scanner scan /path/to/project
+
+# With dependency analysis
+dll-scanner scan /path/to/project --analyze-dependencies --source-dir /path/to/source
+
+# Save results to JSON
+dll-scanner scan /path/to/project --output results.json</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tools">
+            <div class="container">
+                <h3>Interactive Tools</h3>
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <h4>📊 Scan Results Viewer</h4>
+                        <p>Upload and analyze your DLL scan results with interactive visualizations</p>
+                        <a href="scan-results.html" class="btn btn-outline">Open Tool</a>
+                    </div>
+                    <div class="tool-card">
+                        <h4>📋 Changelog</h4>
+                        <p>Browse the complete project changelog with version details</p>
+                        <a href="changelog.html" class="btn btn-outline">View Changelog</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2024 DLL Scanner Contributors. Licensed under MIT License.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/issues" target="_blank">Report Issues</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/LICENSE" target="_blank">License</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

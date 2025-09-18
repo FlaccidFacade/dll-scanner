@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLL Scanner - Scan Results Viewer</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="nav-brand">
+                    <h1>🔍 DLL Scanner</h1>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="scan-results.html" class="active">Scan Results</a></li>
+                    <li><a href="changelog.html">Changelog</a></li>
+                    <li><a href="https://github.com/FlaccidFacade/dll-scanner" target="_blank">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="page-header">
+                <h2>📊 Scan Results Viewer</h2>
+                <p>Upload and analyze your DLL scan results with interactive visualizations</p>
+            </div>
+
+            <!-- URL Input Section -->
+            <section class="url-input-section">
+                <div class="input-group">
+                    <label for="results-url">Load Results from URL:</label>
+                    <div class="url-input-wrapper">
+                        <input type="url" id="results-url" placeholder="https://example.com/scan-results.json or paste JSON directly">
+                        <button id="load-url-btn" class="btn btn-primary">Load</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="json-input">Or paste JSON data directly:</label>
+                    <textarea id="json-input" placeholder='{"scan_path": "/path/to/project", "dll_files": [...], ...}' rows="6"></textarea>
+                    <button id="load-json-btn" class="btn btn-primary">Parse JSON</button>
+                </div>
+            </section>
+
+            <!-- File Upload Section -->
+            <section class="upload-section">
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <h3>Drop JSON file here or click to browse</h3>
+                        <p>Supports DLL Scanner JSON output files</p>
+                        <input type="file" id="file-input" accept=".json,application/json" style="display: none;">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Processing scan results...</p>
+            </div>
+
+            <!-- Error Display -->
+            <div id="error-display" class="error-display hidden">
+                <h3>⚠️ Error</h3>
+                <p id="error-message"></p>
+            </div>
+
+            <!-- Results Display -->
+            <div id="results-container" class="results-container hidden">
+                <!-- Summary Cards -->
+                <section class="summary-section">
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="summary-icon">📁</div>
+                            <div class="summary-content">
+                                <h3 id="total-files">0</h3>
+                                <p>Files Scanned</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">🔧</div>
+                            <div class="summary-content">
+                                <h3 id="total-dlls">0</h3>
+                                <p>DLLs Found</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">⏱️</div>
+                            <div class="summary-content">
+                                <h3 id="scan-duration">0s</h3>
+                                <p>Scan Duration</p>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">🛡️</div>
+                            <div class="summary-content">
+                                <h3 id="signed-dlls">0</h3>
+                                <p>Signed DLLs</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Charts Section -->
+                <section class="charts-section">
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h4>Architecture Distribution</h4>
+                            <canvas id="architecture-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Company Distribution</h4>
+                            <canvas id="company-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Filters and Search -->
+                <section class="filters-section">
+                    <div class="filters-header">
+                        <h3>DLL Files</h3>
+                        <div class="filters-controls">
+                            <input type="text" id="search-input" placeholder="Search DLLs..." class="search-input">
+                            <select id="architecture-filter" class="filter-select">
+                                <option value="">All Architectures</option>
+                            </select>
+                            <select id="signed-filter" class="filter-select">
+                                <option value="">All DLLs</option>
+                                <option value="true">Signed Only</option>
+                                <option value="false">Unsigned Only</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DLL Table -->
+                <section class="table-section">
+                    <div class="table-wrapper">
+                        <table id="dll-table" class="dll-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Architecture</th>
+                                    <th>Company</th>
+                                    <th>Version</th>
+                                    <th>Size</th>
+                                    <th>Signed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dll-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Export Options -->
+                <section class="export-section">
+                    <h3>Export Options</h3>
+                    <div class="export-buttons">
+                        <button id="export-filtered" class="btn btn-outline">Export Filtered Results</button>
+                        <button id="export-summary" class="btn btn-outline">Export Summary Report</button>
+                        <button id="export-csv" class="btn btn-outline">Export as CSV</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- DLL Details Modal -->
+            <div id="dll-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modal-title">DLL Details</h3>
+                        <button class="modal-close" id="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body" id="modal-body">
+                        <!-- DLL details will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2024 DLL Scanner Contributors. Licensed under MIT License.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/issues" target="_blank">Report Issues</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/LICENSE" target="_blank">License</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/scan-results.js"></script>
+</body>
+</html>

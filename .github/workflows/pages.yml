@@ -1,0 +1,160 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_mode:
+        description: 'Deployment mode'
+        required: true
+        default: 'static'
+        type: choice
+        options:
+        - static
+        - with_sample_data
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+
+    - name: Generate pages content
+      run: |
+        # Create output directory
+        mkdir -p _site
+        
+        # Generate static pages and data
+        dll-scanner generate-pages --output _site --generate-data
+        
+        # Generate sample data if in sample mode
+        if [ "${{ github.event.inputs.deploy_mode }}" = "with_sample_data" ]; then
+          echo "Generating sample scan data..."
+          
+          # Create sample scan result JSON
+          cat > sample_scan_result.json << 'EOF'
+        {
+          "scan_path": "/sample/project",
+          "recursive": true,
+          "total_files_scanned": 150,
+          "total_dlls_found": 25,
+          "scan_duration_seconds": 2.34,
+          "errors": [],
+          "dll_files": [
+            {
+              "file_name": "kernel32.dll",
+              "file_path": "/sample/project/bin/kernel32.dll",
+              "file_size": 1048576,
+              "modification_time": "2024-01-15T10:30:00",
+              "machine_type": "amd64",
+              "architecture": "x64",
+              "subsystem": "windows_cui",
+              "dll_characteristics": ["dynamic_base", "nx_compat"],
+              "product_name": "Microsoft Windows Operating System",
+              "product_version": "10.0.19041.1",
+              "file_version": "10.0.19041.1151",
+              "company_name": "Microsoft Corporation",
+              "file_description": "Windows NT BASE API Client DLL",
+              "internal_name": "kernel32",
+              "legal_copyright": "© Microsoft Corporation. All rights reserved.",
+              "original_filename": "KERNEL32.DLL",
+              "imported_dlls": ["ntdll.dll"],
+              "exported_functions": ["CreateFileA", "ReadFile", "WriteFile", "CloseHandle"],
+              "is_signed": true,
+              "checksum": "0x12345678"
+            },
+            {
+              "file_name": "user32.dll",
+              "file_path": "/sample/project/bin/user32.dll",
+              "file_size": 2097152,
+              "modification_time": "2024-01-15T10:30:00",
+              "machine_type": "amd64",
+              "architecture": "x64",
+              "subsystem": "windows_gui",
+              "dll_characteristics": ["dynamic_base", "nx_compat"],
+              "product_name": "Microsoft Windows Operating System",
+              "product_version": "10.0.19041.1",
+              "file_version": "10.0.19041.1151",
+              "company_name": "Microsoft Corporation",
+              "file_description": "Multi-User Windows USER API Client DLL",
+              "internal_name": "user32",
+              "legal_copyright": "© Microsoft Corporation. All rights reserved.",
+              "original_filename": "USER32.DLL",
+              "imported_dlls": ["kernel32.dll", "ntdll.dll"],
+              "exported_functions": ["CreateWindowA", "ShowWindow", "UpdateWindow", "DestroyWindow"],
+              "is_signed": true,
+              "checksum": "0x87654321"
+            },
+            {
+              "file_name": "customlib.dll",
+              "file_path": "/sample/project/lib/customlib.dll",
+              "file_size": 524288,
+              "modification_time": "2024-01-15T10:30:00",
+              "machine_type": "i386",
+              "architecture": "x86",
+              "subsystem": "windows_gui",
+              "dll_characteristics": ["dynamic_base"],
+              "product_name": "Custom Application Library",
+              "product_version": "1.2.3",
+              "file_version": "1.2.3.456",
+              "company_name": "Example Corp",
+              "file_description": "Custom application support library",
+              "internal_name": "customlib",
+              "legal_copyright": "© 2024 Example Corp. All rights reserved.",
+              "original_filename": "customlib.dll",
+              "imported_dlls": ["kernel32.dll", "user32.dll"],
+              "exported_functions": ["InitializeLibrary", "ProcessData", "CleanupLibrary"],
+              "is_signed": false,
+              "checksum": "0xabcdef12"
+            }
+          ]
+        }
+        EOF
+          
+          # Generate sample result page
+          dll-scanner generate-pages --input sample_scan_result.json --project-name "Sample Project" --output _site
+        fi
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: '_site'
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

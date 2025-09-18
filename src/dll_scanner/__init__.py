@@ -15,5 +15,6 @@ from .scanner import DLLScanner
 from .metadata import DLLMetadata
 from .analyzer import DependencyAnalyzer
 from .cyclonedx_exporter import CycloneDXExporter
+from .page_generator import PageGenerator
 
-__all__ = ["DLLScanner", "DLLMetadata", "DependencyAnalyzer", "CycloneDXExporter"]
+__all__ = ["DLLScanner", "DLLMetadata", "DependencyAnalyzer", "CycloneDXExporter", "PageGenerator"]
