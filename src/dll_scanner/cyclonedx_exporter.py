@@ -338,7 +338,7 @@ class CycloneDXExporter:
             )
 
             # Set the copyright field in the component itself for better visibility
-            component.legal_copyright = dll_metadata.legal_copyright
+            component.copyright = dll_metadata.legal_copyright
 
         # Add security/signing properties
         if dll_metadata.is_signed is not None:
