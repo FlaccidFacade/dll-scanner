@@ -307,7 +307,7 @@ class TestCLI:
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.2.0" in result.output
+        assert "0.3.0" in result.output
 
 
 class TestCycloneDXExporter:
@@ -487,6 +487,10 @@ class TestCycloneDXExporter:
         assert "2.1.0" in json_output
         assert "dll.legal_copyright" in json_output
         assert "Copyright (C) 2025 Test Corp" in json_output
+
+        # Verify new generic properties for better Windows Properties compatibility
+        assert "dll.version" in json_output  # Generic version property
+        assert "dll.copyright" in json_output  # Alternative copyright property
 
 
 # Integration tests
