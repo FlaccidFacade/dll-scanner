@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 try:
     from cyclonedx.model.bom import Bom, Tool
     from cyclonedx.model.component import Component, ComponentType, ComponentScope
+    from cyclonedx.model.dependency import Dependency
     from cyclonedx.model import (
         HashType,
         ExternalReference,
@@ -75,6 +76,9 @@ except ImportError:
         pass
 
     class PackageURL:  # type: ignore
+        pass
+
+    class Dependency:  # type: ignore
         pass
 
     class SchemaVersion:  # type: ignore
@@ -178,9 +182,22 @@ class CycloneDXExporter:
                 result.dll_metadata.file_path: result for result in analysis_results
             }
 
+        dll_components = []
         for dll_metadata in scan_result.dll_files:
             component = self._dll_to_component(dll_metadata, dependency_analysis_map)
             bom.components.add(component)
+            dll_components.append(component)
+
+        # Create dependency relationship between main component and DLL components
+        # This resolves the CycloneDX validation warning about incomplete dependency
+        # graph
+        if dll_components:
+            main_dependency = Dependency(ref=main_component.bom_ref)
+            for dll_component in dll_components:
+                # Create a child dependency for each DLL component
+                dll_dependency = Dependency(ref=dll_component.bom_ref)
+                main_dependency.dependencies.add(dll_dependency)
+            bom.dependencies.add(main_dependency)
 
         return bom
 

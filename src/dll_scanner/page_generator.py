@@ -5,7 +5,7 @@ Page generation utilities for GitHub Pages.
 import json
 import shutil
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
 from datetime import datetime
 
 from .metadata import DLLMetadata
@@ -334,14 +334,15 @@ class PageGenerator:
             if line.startswith("### ") and current_entry:
                 section_name = line[4:].strip().lower()
                 current_section = section_name
-                current_entry["sections"][section_name] = []
+                cast(Dict[str, List[str]], current_entry["sections"])[section_name] = []
                 continue
 
             # List items
             if line.startswith("- ") and current_entry and current_section:
                 item = line[2:].strip()
-                current_entry["sections"][current_section].append(item)
-
+                cast(Dict[str, List[str]], current_entry["sections"])[
+                    current_section
+                ].append(item)
         if current_entry:
             entries.append(current_entry)
 
