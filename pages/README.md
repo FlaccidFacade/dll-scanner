@@ -149,7 +149,7 @@ python -m http.server 8000 -d ./test-pages
 
 ### GitHub Actions
 The `.github/workflows/pages.yml` workflow automatically:
-1. Generates static pages on push to main
+1. Generates static pages on release
 2. Creates sample data for demonstration
 3. Deploys to GitHub Pages
 
