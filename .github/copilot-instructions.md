@@ -2,6 +2,8 @@
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
+> **Note**: This project is configured to use the `#codebase` semantic search tool by default for all GitHub Copilot interactions. This configuration is enforced through the `.github/copilot.yml` file.
+
 DLL Scanner is a powerful Python tool for scanning directories to find DLL files, extracting comprehensive metadata, and performing static code analysis to confirm dependencies. The tool supports Windows DLL scanning functionality but maintains cross-platform compatibility for development and testing.
 
 ## Working Effectively
