@@ -616,20 +616,20 @@ def generate_pages(
 
     try:
         generator = PageGenerator()
-        
+
         console.print(f"[bold blue]Generating GitHub Pages content...[/bold blue]")
-        
+
         # Create output directory
         output.mkdir(parents=True, exist_ok=True)
-        
+
         # Copy static assets
         console.print("📁 Copying static assets...")
         generator.copy_static_assets(output / "pages")
-        
+
         # Create root index.html redirect
         console.print("🏠 Creating root index.html...")
         generator.create_index_redirect(output)
-        
+
         # Generate data files if requested
         if generate_data:
             console.print("📋 Generating changelog data...")
@@ -638,77 +638,80 @@ def generate_pages(
                 console.print(f"✅ Changelog data generated: {changelog_path}")
             except FileNotFoundError as e:
                 console.print(f"⚠️  [yellow]Warning: {e}[/yellow]")
-        
+
         # Generate scan result page if input provided
         if input_file:
             console.print(f"📊 Generating scan result page from {input_file}...")
-            
+
             # Load scan result from JSON
-            with open(input_file, 'r', encoding='utf-8') as f:
+            with open(input_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            
+
             # Convert to ScanResult object
             scan_result = ScanResult(
-                scan_path=data.get('scan_path', ''),
-                recursive=data.get('recursive', True),
+                scan_path=data.get("scan_path", ""),
+                recursive=data.get("recursive", True),
                 dll_files=[],  # We'll populate this from the data
-                total_files_scanned=data.get('total_files_scanned', 0),
-                total_dlls_found=data.get('total_dlls_found', 0),
-                scan_duration_seconds=data.get('scan_duration_seconds', 0.0),
-                errors=data.get('errors', [])
+                total_files_scanned=data.get("total_files_scanned", 0),
+                total_dlls_found=data.get("total_dlls_found", 0),
+                scan_duration_seconds=data.get("scan_duration_seconds", 0.0),
+                errors=data.get("errors", []),
             )
-            
+
             # Convert DLL files data back to DLLMetadata objects
-            for dll_data in data.get('dll_files', []):
+            for dll_data in data.get("dll_files", []):
                 # Handle datetime conversion
-                mod_time = dll_data.get('modification_time', '')
+                mod_time = dll_data.get("modification_time", "")
                 if isinstance(mod_time, str):
                     try:
                         from datetime import datetime
-                        mod_time = datetime.fromisoformat(mod_time.replace('Z', '+00:00'))
+
+                        mod_time = datetime.fromisoformat(
+                            mod_time.replace("Z", "+00:00")
+                        )
                     except:
                         mod_time = datetime.now()
-                
+
                 dll_metadata = DLLMetadata(
-                    file_path=dll_data.get('file_path', ''),
-                    file_name=dll_data.get('file_name', ''),
-                    file_size=dll_data.get('file_size', 0),
+                    file_path=dll_data.get("file_path", ""),
+                    file_name=dll_data.get("file_name", ""),
+                    file_size=dll_data.get("file_size", 0),
                     modification_time=mod_time,
-                    machine_type=dll_data.get('machine_type'),
-                    architecture=dll_data.get('architecture'),
-                    subsystem=dll_data.get('subsystem'),
-                    dll_characteristics=dll_data.get('dll_characteristics', []),
-                    product_name=dll_data.get('product_name'),
-                    product_version=dll_data.get('product_version'),
-                    file_version=dll_data.get('file_version'),
-                    company_name=dll_data.get('company_name'),
-                    file_description=dll_data.get('file_description'),
-                    internal_name=dll_data.get('internal_name'),
-                    legal_copyright=dll_data.get('legal_copyright'),
-                    original_filename=dll_data.get('original_filename'),
-                    imported_dlls=dll_data.get('imported_dlls', []),
-                    exported_functions=dll_data.get('exported_functions', []),
-                    is_signed=dll_data.get('is_signed', False),
-                    checksum=dll_data.get('checksum')
+                    machine_type=dll_data.get("machine_type"),
+                    architecture=dll_data.get("architecture"),
+                    subsystem=dll_data.get("subsystem"),
+                    dll_characteristics=dll_data.get("dll_characteristics", []),
+                    product_name=dll_data.get("product_name"),
+                    product_version=dll_data.get("product_version"),
+                    file_version=dll_data.get("file_version"),
+                    company_name=dll_data.get("company_name"),
+                    file_description=dll_data.get("file_description"),
+                    internal_name=dll_data.get("internal_name"),
+                    legal_copyright=dll_data.get("legal_copyright"),
+                    original_filename=dll_data.get("original_filename"),
+                    imported_dlls=dll_data.get("imported_dlls", []),
+                    exported_functions=dll_data.get("exported_functions", []),
+                    is_signed=dll_data.get("is_signed", False),
+                    checksum=dll_data.get("checksum"),
                 )
                 scan_result.dll_files.append(dll_metadata)
-            
+
             # Generate the page
             # First set the generator to use the output directory
             output_generator = PageGenerator(output / "pages")
             result_page = output_generator.generate_scan_result_page(
-                scan_result, 
+                scan_result,
                 project_name,
-                f"{project_name.lower().replace(' ', '_')}_results.html"
+                f"{project_name.lower().replace(' ', '_')}_results.html",
             )
-            
+
             console.print(f"✅ Scan result page generated: {result_page}")
-        
+
         console.print(f"\n[bold green]✅ Pages generated successfully![/bold green]")
         console.print(f"📁 Output directory: {output.absolute()}")
         console.print(f"🌐 To serve locally: python -m http.server 8000 -d {output}")
         console.print(f"🔗 Then visit: http://localhost:8000")
-        
+
     except Exception as e:
         logger.error(f"Page generation failed: {e}")
         console.print(f"[bold red]❌ Error: {e}[/bold red]")

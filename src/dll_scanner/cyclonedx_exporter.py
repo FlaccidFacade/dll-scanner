@@ -288,6 +288,11 @@ class CycloneDXExporter:
                 Property(name="dll.product_version", value=dll_metadata.product_version)
             )
 
+        if dll_metadata.file_version:
+            component.properties.add(
+                Property(name="dll.file_version", value=dll_metadata.file_version)
+            )
+
         if dll_metadata.internal_name:
             component.properties.add(
                 Property(name="dll.internal_name", value=dll_metadata.internal_name)

@@ -8,7 +8,7 @@ This package provides functionality to:
 - Generate comprehensive reports
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "DLL Scanner Contributors"
 
 from .scanner import DLLScanner
@@ -17,4 +17,10 @@ from .analyzer import DependencyAnalyzer
 from .cyclonedx_exporter import CycloneDXExporter
 from .page_generator import PageGenerator
 
-__all__ = ["DLLScanner", "DLLMetadata", "DependencyAnalyzer", "CycloneDXExporter", "PageGenerator"]
+__all__ = [
+    "DLLScanner",
+    "DLLMetadata",
+    "DependencyAnalyzer",
+    "CycloneDXExporter",
+    "PageGenerator",
+]
