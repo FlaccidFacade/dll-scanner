@@ -133,19 +133,6 @@ dll-scanner generate-pages \
   --output ./pages-output
 ```
 
-#### Version Management
-
-```bash
-# Create semantic version tag based on project version
-dll-scanner create-version-tag
-
-# Preview what would be done without creating tag
-dll-scanner create-version-tag --dry-run
-
-# Force creation even if tag already exists
-dll-scanner create-version-tag --force
-```
-
 #### Single File Inspection
 
 ```bash
@@ -436,19 +423,6 @@ xdg-open htmlcov/index.html  # Linux
 ```
 
 ### Building and Publishing
-
-#### Automatic Semantic Versioning
-
-DLL Scanner includes automated semantic versioning that creates Git tags based on the project version. See [docs/SEMANTIC_VERSIONING.md](docs/SEMANTIC_VERSIONING.md) for detailed documentation.
-
-Quick usage:
-```bash
-# Create version tag manually
-dll-scanner create-version-tag
-
-# Preview changes without creating tag
-dll-scanner create-version-tag --dry-run
-```
 
 #### Automated Publishing (Recommended)
 

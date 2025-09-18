@@ -540,38 +540,6 @@ class TestVersionManagement:
             f"__init__.py has {init_version}"
         )
 
-    def test_tag_format_generation(self):
-        """Test that semantic version tags are generated correctly."""
-        test_versions = [
-            ("1.0.0", "v1.0.0"),
-            ("0.2.0", "v0.2.0"),
-            ("2.1.3", "v2.1.3"),
-            ("1.0.0-beta", "v1.0.0-beta"),
-            ("1.0.0+build.123", "v1.0.0+build.123"),
-        ]
-        
-        for version, expected_tag in test_versions:
-            tag = f"v{version}"
-            assert tag == expected_tag, f"Expected {expected_tag}, got {tag}"
-
-    def test_create_version_tag_dry_run(self):
-        """Test the create-version-tag command in dry-run mode."""
-        from click.testing import CliRunner
-        from dll_scanner.cli import cli
-
-        runner = CliRunner()
-        result = runner.invoke(cli, ["create-version-tag", "--dry-run"])
-        
-        # Command should succeed
-        assert result.exit_code == 0
-        
-        # Should contain expected output
-        assert "Creating semantic version tag" in result.output
-        assert "Project version:" in result.output
-        assert "Git tag:" in result.output
-        assert "DRY RUN" in result.output
-        assert "Would create tag:" in result.output
-
 
 # Integration tests
 class TestIntegration:

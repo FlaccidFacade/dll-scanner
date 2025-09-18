@@ -2,12 +2,6 @@ name: Automatic Semantic Versioning
 
 on:
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Force tag creation even if it already exists'
-        required: false
-        default: false
-        type: boolean
   push:
     branches: [main]
     paths:
@@ -81,7 +75,7 @@ jobs:
         fi
 
     - name: Create semantic version tag
-      if: steps.check-tag.outputs.exists == 'false' || github.event.inputs.force == 'true'
+      if: steps.check-tag.outputs.exists == 'false'
       run: |
         TAG="${{ steps.extract-version.outputs.tag }}"
         VERSION="${{ steps.extract-version.outputs.version }}"
@@ -89,12 +83,6 @@ jobs:
         # Configure git
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        
-        if [ "${{ github.event.inputs.force }}" == "true" ] && [ "${{ steps.check-tag.outputs.exists }}" == "true" ]; then
-          echo "Force flag is set, deleting existing tag $TAG"
-          git tag -d "$TAG" || true
-          git push origin --delete "$TAG" || true
-        fi
         
         # Create annotated tag with version information
         git tag -a "$TAG" -m "Release version $VERSION
@@ -112,7 +100,7 @@ jobs:
         echo "Successfully created and pushed tag: $TAG"
 
     - name: Create release notes
-      if: steps.check-tag.outputs.exists == 'false' || github.event.inputs.force == 'true'
+      if: steps.check-tag.outputs.exists == 'false'
       run: |
         TAG="${{ steps.extract-version.outputs.tag }}"
         VERSION="${{ steps.extract-version.outputs.version }}"
@@ -142,17 +130,15 @@ jobs:
         TAG="${{ steps.extract-version.outputs.tag }}"
         VERSION="${{ steps.extract-version.outputs.version }}"
         EXISTS="${{ steps.check-tag.outputs.exists }}"
-        FORCE="${{ github.event.inputs.force }}"
         
         echo "## Semantic Versioning Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "- **Project Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
         echo "- **Git Tag:** $TAG" >> $GITHUB_STEP_SUMMARY
         echo "- **Tag Existed:** $EXISTS" >> $GITHUB_STEP_SUMMARY
-        echo "- **Force Flag:** $FORCE" >> $GITHUB_STEP_SUMMARY
         echo "- **Action Taken:** " >> $GITHUB_STEP_SUMMARY
         
-        if [ "$EXISTS" == "false" ] || [ "$FORCE" == "true" ]; then
+        if [ "$EXISTS" == "false" ]; then
           echo "  ✅ Tag created successfully" >> $GITHUB_STEP_SUMMARY
         else
           echo "  ⏭️ Skipped (tag already exists)" >> $GITHUB_STEP_SUMMARY
