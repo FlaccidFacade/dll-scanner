@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLL Scanner - Changelog</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="nav-brand">
+                    <h1>🔍 DLL Scanner</h1>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="scan-results.html">Scan Results</a></li>
+                    <li><a href="changelog.html" class="active">Changelog</a></li>
+                    <li><a href="https://github.com/FlaccidFacade/dll-scanner" target="_blank">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="page-header">
+                <h2>📋 Changelog</h2>
+                <p>Track all changes, improvements, and new features in DLL Scanner</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="changelog-loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading changelog...</p>
+            </div>
+
+            <!-- Error Display -->
+            <div id="changelog-error" class="error-display hidden">
+                <h3>⚠️ Error Loading Changelog</h3>
+                <p id="changelog-error-message">Failed to load changelog from GitHub.</p>
+                <button id="retry-btn" class="btn btn-primary">Retry</button>
+            </div>
+
+            <!-- Changelog Content -->
+            <div id="changelog-content" class="changelog-content hidden">
+                <!-- Search and Filter -->
+                <div class="changelog-controls">
+                    <div class="search-wrapper">
+                        <input type="text" id="changelog-search" placeholder="Search versions, features..." class="search-input">
+                    </div>
+                    <div class="filter-wrapper">
+                        <select id="version-filter" class="filter-select">
+                            <option value="">All Versions</option>
+                        </select>
+                        <select id="type-filter" class="filter-select">
+                            <option value="">All Changes</option>
+                            <option value="added">Added</option>
+                            <option value="changed">Changed</option>
+                            <option value="deprecated">Deprecated</option>
+                            <option value="removed">Removed</option>
+                            <option value="fixed">Fixed</option>
+                            <option value="security">Security</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Changelog Timeline -->
+                <div id="changelog-timeline" class="changelog-timeline">
+                    <!-- Changelog entries will be populated here -->
+                </div>
+            </div>
+
+            <!-- Fallback Static Content -->
+            <div id="fallback-changelog" class="changelog-fallback hidden">
+                <div class="version-entry">
+                    <div class="version-header">
+                        <h3 class="version-number">v0.1.0</h3>
+                        <span class="version-date">2024-01-XX</span>
+                        <span class="version-badge initial">Initial Release</span>
+                    </div>
+                    
+                    <div class="version-content">
+                        <div class="change-section">
+                            <h4 class="change-type added">✨ Added</h4>
+                            <ul class="change-list">
+                                <li>
+                                    <strong>Core Features</strong>
+                                    <ul>
+                                        <li>Recursive directory scanning for DLL files</li>
+                                        <li>Comprehensive PE metadata extraction including architecture, version, and security info</li>
+                                        <li>Import/export table analysis</li>
+                                        <li>Digital signature status detection</li>
+                                        <li>Static code analysis for dependency confirmation</li>
+                                        <li>Support for multiple programming languages (C/C++, C#, Python, Java, etc.)</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Command Line Interface</strong>
+                                    <ul>
+                                        <li><code>dll-scanner scan</code> - Scan directories for DLL files</li>
+                                        <li><code>dll-scanner inspect</code> - Inspect single DLL files</li>
+                                        <li><code>dll-scanner analyze</code> - Analyze source code dependencies</li>
+                                        <li>Rich formatted output with progress bars</li>
+                                        <li>JSON export functionality</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Python API</strong>
+                                    <ul>
+                                        <li><code>DLLScanner</code> class for directory scanning</li>
+                                        <li><code>DLLMetadata</code> class for metadata representation</li>
+                                        <li><code>DependencyAnalyzer</code> class for static code analysis</li>
+                                        <li>Parallel processing support</li>
+                                        <li>Comprehensive error handling</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Export Formats</strong>
+                                    <ul>
+                                        <li>JSON output format</li>
+                                        <li>CycloneDX SBOM format support</li>
+                                        <li>Summary statistics and reporting</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Development Infrastructure</strong>
+                                    <ul>
+                                        <li>GitHub Actions CI/CD pipeline</li>
+                                        <li>Automated testing with pytest</li>
+                                        <li>Code formatting with Black</li>
+                                        <li>Linting with flake8</li>
+                                        <li>Type checking with mypy</li>
+                                        <li>PyPI publishing automation</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Documentation</strong>
+                                    <ul>
+                                        <li>Comprehensive README with usage examples</li>
+                                        <li>API documentation with docstrings</li>
+                                        <li>Contributing guidelines</li>
+                                        <li>Example scripts for common use cases</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="change-section">
+                            <h4 class="change-type dependencies">📦 Dependencies</h4>
+                            <ul class="change-list">
+                                <li>pefile >= 2023.2.7 (PE file parsing)</li>
+                                <li>click >= 8.0.0 (CLI framework)</li>
+                                <li>rich >= 13.0.0 (Rich console output)</li>
+                                <li>pathlib-mate >= 1.0.0 (Path utilities)</li>
+                                <li>cyclonedx-bom >= 4.0.0 (SBOM generation)</li>
+                            </ul>
+                        </div>
+
+                        <div class="change-section">
+                            <h4 class="change-type requirements">🔧 Requirements</h4>
+                            <ul class="change-list">
+                                <li>Python 3.8+</li>
+                                <li>Compatible with Windows, Linux, and macOS</li>
+                            </ul>
+                        </div>
+
+                        <div class="change-section">
+                            <h4 class="change-type security">🛡️ Security</h4>
+                            <ul class="change-list">
+                                <li>Input validation for file paths</li>
+                                <li>Safe handling of PE file parsing errors</li>
+                                <li>No execution of analyzed code</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2024 DLL Scanner Contributors. Licensed under MIT License.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/issues" target="_blank">Report Issues</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
+                    <a href="https://github.com/FlaccidFacade/dll-scanner/blob/main/LICENSE" target="_blank">License</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/changelog.js"></script>
+</body>
+</html>

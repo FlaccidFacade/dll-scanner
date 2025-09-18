@@ -1,0 +1,61 @@
+[
+  {
+    "version": "0.1.0",
+    "date": "2024-01-XX",
+    "sections": {
+      "added": [
+        "Initial release of DLL Scanner",
+        "**Core Features:**",
+        "Recursive directory scanning for DLL files",
+        "Comprehensive PE metadata extraction including:",
+        "Architecture and machine type detection",
+        "Version information (product, file, company)",
+        "Import/export table analysis",
+        "Security characteristics",
+        "Digital signature status",
+        "Static code analysis for dependency confirmation",
+        "Support for multiple programming languages (C/C++, C#, Python, Java, etc.)",
+        "**Command Line Interface:**",
+        "`dll-scanner scan` - Scan directories for DLL files",
+        "`dll-scanner inspect` - Inspect single DLL files",
+        "`dll-scanner analyze` - Analyze source code dependencies",
+        "Rich formatted output with progress bars",
+        "JSON export functionality",
+        "**Python API:**",
+        "`DLLScanner` class for directory scanning",
+        "`DLLMetadata` class for metadata representation",
+        "`DependencyAnalyzer` class for static code analysis",
+        "Parallel processing support",
+        "Comprehensive error handling",
+        "**Development Infrastructure:**",
+        "GitHub Actions CI/CD pipeline",
+        "Automated testing with pytest",
+        "Code formatting with Black",
+        "Linting with flake8",
+        "Type checking with mypy",
+        "PyPI publishing automation",
+        "**Documentation:**",
+        "Comprehensive README with usage examples",
+        "API documentation with docstrings",
+        "Contributing guidelines",
+        "Example scripts for common use cases"
+      ],
+      "dependencies": [
+        "pefile >= 2023.2.7 (PE file parsing)",
+        "click >= 8.0.0 (CLI framework)",
+        "rich >= 13.0.0 (Rich console output)",
+        "pathlib-mate >= 1.0.0 (Path utilities)"
+      ],
+      "requirements": [
+        "Python 3.8+",
+        "Compatible with Windows, Linux, and macOS"
+      ],
+      "security": [
+        "Input validation for file paths",
+        "Safe handling of PE file parsing errors",
+        "No execution of analyzed code"
+      ]
+    },
+    "timestamp": "2025-09-18T01:51:17.045809"
+  }
+]
