@@ -21,6 +21,14 @@ Thank you for your interest in contributing to DLL Scanner! This document provid
    pip install -e ".[dev]"
    ```
 
+4. **Install pre-commit hooks:**
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+
+   This will automatically run Black and other checks before each commit.
+
 ## Code Quality
 
 This project maintains high code quality standards:
@@ -30,9 +38,27 @@ This project maintains high code quality standards:
 - **Type Checking:** Type hints are checked with [mypy](https://mypy.readthedocs.io/)
 - **Testing:** Tests are written with [pytest](https://pytest.org/)
 
+## GitHub Copilot Configuration
+
+This project is configured to use GitHub Copilot with the `#codebase` semantic search tool by default. This ensures consistent code assistance throughout the project:
+
+- The configuration is stored in `.github/copilot.yml`
+- The CI pipeline validates this configuration
+- When using Copilot, always reference the existing codebase for patterns and styles
+- Customized Copilot instructions are available in `.github/copilot-instructions.md`
+
+This configuration helps maintain code consistency and leverages project-specific knowledge during development.
+
 ### Running Quality Checks
 
 ```bash
+# Run all pre-commit hooks on all files
+pre-commit run --all-files
+
+# Run a specific hook
+pre-commit run black --all-files
+
+# Manual quality checks
 # Format code
 black src/ tests/
 
@@ -48,6 +74,8 @@ mypy src/dll_scanner --ignore-missing-imports
 # Run tests
 pytest tests/ -v --cov=dll_scanner
 ```
+
+> Note: If you've installed the pre-commit hooks, Black will automatically run before each commit.
 
 ## Testing
 
@@ -81,6 +109,7 @@ def test_function_name_should_do_something():
 ### Pull Request Checklist
 
 - [ ] Tests pass locally
+- [ ] Pre-commit hooks pass (`pre-commit run --all-files`)
 - [ ] Code is formatted with Black
 - [ ] Code passes flake8 linting
 - [ ] Type hints are added and mypy passes

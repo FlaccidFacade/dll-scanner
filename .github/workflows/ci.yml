@@ -112,7 +112,7 @@ jobs:
 
   build:
     name: "Build Package"
-    needs: [test, test-debian]
+    needs: [test, test-debian, pre-commit]
     runs-on: ubuntu-latest
     
     steps:
@@ -172,3 +172,39 @@ jobs:
         path: |
           bandit-report.json
           safety-report.json
+          
+  copilot-config:
+    name: "Validate Copilot Configuration"
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check Copilot config exists
+      run: |
+        if [ ! -f .github/copilot.yml ]; then
+          echo "::error::Missing .github/copilot.yml configuration file"
+          exit 1
+        fi
+
+    - name: Validate Copilot config structure
+      run: |
+        # Basic YAML validation
+        python -c "import yaml; yaml.safe_load(open('.github/copilot.yml'))"
+        
+        # Check for required structure
+        python -c "
+        import yaml
+        config = yaml.safe_load(open('.github/copilot.yml'))
+        assert 'search' in config, 'Missing search configuration'
+        assert 'default_tool' in config['search'], 'Missing default_tool'
+        assert config['search']['default_tool'] == 'codebase', 'Default tool should be codebase'
+        assert 'tools' in config['search'], 'Missing tools configuration'
+        tools = config['search']['tools']
+        assert any(tool['name'] == 'codebase' for tool in tools), 'codebase tool not found'
+        codebase_tool = next(tool for tool in tools if tool['name'] == 'codebase')
+        assert 'command' in codebase_tool, 'codebase tool missing command'
+        assert codebase_tool['command'] == '#codebase', 'codebase tool command should be #codebase'
+        print('Copilot configuration validated successfully!')
+        "
+      shell: bash

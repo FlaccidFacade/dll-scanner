@@ -1,0 +1,7 @@
+search:
+  default_tool: codebase
+  tools:
+    - name: "codebase"
+      assistant_label: "semantic search"
+      command: "#codebase"
+      description: "Semantic search through your codebase"

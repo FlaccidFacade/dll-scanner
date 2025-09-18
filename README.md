@@ -388,6 +388,10 @@ pytest --cov=dll_scanner
 # Format code
 black src/ tests/
 
+# Setup pre-commit hooks (automatically run Black before each commit)
+pip install pre-commit
+pre-commit install
+
 # Type checking
 mypy src/
 
