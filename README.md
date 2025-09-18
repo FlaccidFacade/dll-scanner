@@ -117,6 +117,19 @@ dll-scanner inspect mylib.dll --cyclonedx --output mylib_sbom.json
 ```
 ```
 
+#### Page Generation
+
+```bash
+# Generate GitHub Pages content
+dll-scanner generate-pages --output ./pages-output --generate-data
+
+# Generate pages with specific scan results
+dll-scanner generate-pages \
+  --input scan_results.json \
+  --project-name "My Project" \
+  --output ./pages-output
+```
+
 #### Single File Inspection
 
 ```bash
@@ -203,6 +216,67 @@ print(f"Most common imports: {stats['most_common_imports']}")
 x64_dlls = [dll for dll in result.dll_files if dll.architecture == 'x64']
 unsigned_dlls = [dll for dll in result.dll_files if not dll.is_signed]
 ```
+
+## GitHub Pages
+
+DLL Scanner includes a comprehensive GitHub Pages integration for hosting interactive web tools and documentation.
+
+### Features
+
+- **📊 Interactive Scan Results Viewer**: Upload and analyze DLL scan results with charts, filtering, and export capabilities
+- **📋 Dynamic Changelog**: Auto-generated changelog viewer with search and filtering
+- **🏠 Project Documentation**: Complete project overview and getting started guide
+- **🔗 URL Integration**: Direct linking to scan results and specific changelog versions
+
+### Accessing the Pages
+
+Visit the GitHub Pages site at: `https://flaccidfacade.github.io/dll-scanner`
+
+### Page Generation
+
+Generate static pages for your own results:
+
+```bash
+# Generate basic pages
+dll-scanner generate-pages --output ./my-pages --generate-data
+
+# Generate pages with specific scan results
+dll-scanner generate-pages \
+  --input my_scan_results.json \
+  --project-name "My Project Analysis" \
+  --output ./my-pages
+
+# Serve locally for testing
+python -m http.server 8000 -d ./my-pages
+```
+
+### Interactive Tools
+
+#### Scan Results Viewer
+- **File Upload**: Drag and drop JSON scan results
+- **URL Loading**: Load results from any accessible URL
+- **Live Filtering**: Search and filter DLLs by name, architecture, or signing status
+- **Visualizations**: Architecture distribution charts and company breakdowns
+- **Export Options**: JSON, CSV, and summary report exports
+
+#### Changelog Browser
+- **GitHub Integration**: Automatically loads latest changelog from repository
+- **Search & Filter**: Find specific versions or change types
+- **Timeline View**: Visual timeline with version badges
+
+### URL Parameters
+
+Direct link to specific data:
+
+```bash
+# Load specific scan results
+https://your-pages-url/pages/scan-results.html?url=data/my_scan.json
+
+# Filter changelog to specific version
+https://your-pages-url/pages/changelog.html?version=1.0.0
+```
+
+For more details, see the [Pages Documentation](pages/README.md).
 
 ## Output Format
 

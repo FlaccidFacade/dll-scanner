@@ -660,11 +660,20 @@ def generate_pages(
             
             # Convert DLL files data back to DLLMetadata objects
             for dll_data in data.get('dll_files', []):
+                # Handle datetime conversion
+                mod_time = dll_data.get('modification_time', '')
+                if isinstance(mod_time, str):
+                    try:
+                        from datetime import datetime
+                        mod_time = datetime.fromisoformat(mod_time.replace('Z', '+00:00'))
+                    except:
+                        mod_time = datetime.now()
+                
                 dll_metadata = DLLMetadata(
                     file_path=dll_data.get('file_path', ''),
                     file_name=dll_data.get('file_name', ''),
                     file_size=dll_data.get('file_size', 0),
-                    modification_time=dll_data.get('modification_time', ''),
+                    modification_time=mod_time,
                     machine_type=dll_data.get('machine_type'),
                     architecture=dll_data.get('architecture'),
                     subsystem=dll_data.get('subsystem'),
@@ -685,7 +694,9 @@ def generate_pages(
                 scan_result.dll_files.append(dll_metadata)
             
             # Generate the page
-            result_page = generator.generate_scan_result_page(
+            # First set the generator to use the output directory
+            output_generator = PageGenerator(output / "pages")
+            result_page = output_generator.generate_scan_result_page(
                 scan_result, 
                 project_name,
                 f"{project_name.lower().replace(' ', '_')}_results.html"

@@ -1,0 +1,287 @@
+{
+  "scan_path": "/sample/project",
+  "recursive": true,
+  "total_files_scanned": 150,
+  "total_dlls_found": 8,
+  "scan_duration_seconds": 2.34,
+  "errors": [],
+  "dll_files": [
+    {
+      "file_path": "/sample/project/bin/kernel32.dll",
+      "file_name": "kernel32.dll",
+      "file_size": 1048576,
+      "modification_time": "2024-01-15T10:30:00",
+      "machine_type": "amd64",
+      "architecture": "x64",
+      "subsystem": "windows_cui",
+      "dll_characteristics": [
+        "dynamic_base",
+        "nx_compat"
+      ],
+      "product_name": "Microsoft Windows Operating System",
+      "product_version": "10.0.19041.1",
+      "file_version": "10.0.19041.1151",
+      "company_name": "Microsoft Corporation",
+      "file_description": "Windows NT BASE API Client DLL",
+      "internal_name": "kernel32",
+      "legal_copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "original_filename": "KERNEL32.DLL",
+      "imported_dlls": [
+        "ntdll.dll"
+      ],
+      "exported_functions": [
+        "CreateFileA",
+        "ReadFile",
+        "WriteFile",
+        "CloseHandle",
+        "GetModuleHandleA",
+        "GetProcAddress"
+      ],
+      "is_signed": true,
+      "checksum": "0x12345678",
+      "scan_timestamp": "2025-09-18T01:52:49.882419",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/bin/user32.dll",
+      "file_name": "user32.dll",
+      "file_size": 2097152,
+      "modification_time": "2024-01-15T10:30:00",
+      "machine_type": "amd64",
+      "architecture": "x64",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [
+        "dynamic_base",
+        "nx_compat"
+      ],
+      "product_name": "Microsoft Windows Operating System",
+      "product_version": "10.0.19041.1",
+      "file_version": "10.0.19041.1151",
+      "company_name": "Microsoft Corporation",
+      "file_description": "Multi-User Windows USER API Client DLL",
+      "internal_name": "user32",
+      "legal_copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "original_filename": "USER32.DLL",
+      "imported_dlls": [
+        "kernel32.dll",
+        "ntdll.dll"
+      ],
+      "exported_functions": [
+        "CreateWindowA",
+        "ShowWindow",
+        "UpdateWindow",
+        "DestroyWindow",
+        "MessageBoxA"
+      ],
+      "is_signed": true,
+      "checksum": "0x87654321",
+      "scan_timestamp": "2025-09-18T01:52:49.882429",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/lib/customlib.dll",
+      "file_name": "customlib.dll",
+      "file_size": 524288,
+      "modification_time": "2024-01-15T10:30:00",
+      "machine_type": "i386",
+      "architecture": "x86",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [
+        "dynamic_base"
+      ],
+      "product_name": "Custom Application Library",
+      "product_version": "1.2.3",
+      "file_version": "1.2.3.456",
+      "company_name": "Example Corp",
+      "file_description": "Custom application support library",
+      "internal_name": "customlib",
+      "legal_copyright": "\u00a9 2024 Example Corp. All rights reserved.",
+      "original_filename": "customlib.dll",
+      "imported_dlls": [
+        "kernel32.dll",
+        "user32.dll"
+      ],
+      "exported_functions": [
+        "InitializeLibrary",
+        "ProcessData",
+        "CleanupLibrary"
+      ],
+      "is_signed": false,
+      "checksum": "0xabcdef12",
+      "scan_timestamp": "2025-09-18T01:52:49.882435",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/bin/gdi32.dll",
+      "file_name": "gdi32.dll",
+      "file_size": 1572864,
+      "modification_time": "2024-01-15T10:30:00",
+      "machine_type": "amd64",
+      "architecture": "x64",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [
+        "dynamic_base",
+        "nx_compat"
+      ],
+      "product_name": "Microsoft Windows Operating System",
+      "product_version": "10.0.19041.1",
+      "file_version": "10.0.19041.1151",
+      "company_name": "Microsoft Corporation",
+      "file_description": "GDI Client DLL",
+      "internal_name": "gdi32",
+      "legal_copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "original_filename": "GDI32.DLL",
+      "imported_dlls": [
+        "kernel32.dll",
+        "ntdll.dll"
+      ],
+      "exported_functions": [
+        "CreateDC",
+        "DeleteDC",
+        "BitBlt",
+        "SetPixel"
+      ],
+      "is_signed": true,
+      "checksum": "0x9876543",
+      "scan_timestamp": "2025-09-18T01:52:49.882439",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/legacy/legacy32.dll",
+      "file_name": "legacy32.dll",
+      "file_size": 262144,
+      "modification_time": "2020-05-10T14:20:00",
+      "machine_type": "i386",
+      "architecture": "x86",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [],
+      "product_name": "Legacy Support Library",
+      "product_version": "2.1.0",
+      "file_version": "2.1.0.100",
+      "company_name": "Legacy Systems Inc",
+      "file_description": "Legacy application compatibility layer",
+      "internal_name": "legacy32",
+      "legal_copyright": "\u00a9 2020 Legacy Systems Inc. All rights reserved.",
+      "original_filename": "legacy32.dll",
+      "imported_dlls": [
+        "kernel32.dll",
+        "user32.dll",
+        "gdi32.dll"
+      ],
+      "exported_functions": [
+        "LegacyInit",
+        "LegacyProcess",
+        "LegacyShutdown"
+      ],
+      "is_signed": false,
+      "checksum": "0xfedcba98",
+      "scan_timestamp": "2025-09-18T01:52:49.882443",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/graphics/opengl32.dll",
+      "file_name": "opengl32.dll",
+      "file_size": 3145728,
+      "modification_time": "2024-01-15T10:30:00",
+      "machine_type": "amd64",
+      "architecture": "x64",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [
+        "dynamic_base",
+        "nx_compat"
+      ],
+      "product_name": "Microsoft Windows Operating System",
+      "product_version": "10.0.19041.1",
+      "file_version": "10.0.19041.1151",
+      "company_name": "Microsoft Corporation",
+      "file_description": "OpenGL Client DLL",
+      "internal_name": "opengl32",
+      "legal_copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "original_filename": "OPENGL32.DLL",
+      "imported_dlls": [
+        "kernel32.dll",
+        "user32.dll",
+        "gdi32.dll"
+      ],
+      "exported_functions": [
+        "glBegin",
+        "glEnd",
+        "glVertex3f",
+        "glColor3f",
+        "wglCreateContext"
+      ],
+      "is_signed": true,
+      "checksum": "0x13579246",
+      "scan_timestamp": "2025-09-18T01:52:49.882447",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/third_party/third_party.dll",
+      "file_name": "third_party.dll",
+      "file_size": 786432,
+      "modification_time": "2023-08-20T16:45:00",
+      "machine_type": "amd64",
+      "architecture": "x64",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [
+        "dynamic_base"
+      ],
+      "product_name": "Third Party Component",
+      "product_version": "3.4.1",
+      "file_version": "3.4.1.789",
+      "company_name": "ThirdParty Solutions Ltd",
+      "file_description": "Third party component library",
+      "internal_name": "thirdparty",
+      "legal_copyright": "\u00a9 2023 ThirdParty Solutions Ltd. All rights reserved.",
+      "original_filename": "third_party.dll",
+      "imported_dlls": [
+        "kernel32.dll",
+        "user32.dll",
+        "msvcrt.dll"
+      ],
+      "exported_functions": [
+        "TPInit",
+        "TPExecute",
+        "TPCleanup",
+        "TPGetVersion"
+      ],
+      "is_signed": true,
+      "checksum": "0x24681357",
+      "scan_timestamp": "2025-09-18T01:52:49.882450",
+      "analysis_errors": []
+    },
+    {
+      "file_path": "/sample/project/utils/utils.dll",
+      "file_name": "utils.dll",
+      "file_size": 131072,
+      "modification_time": "2024-01-10T09:15:00",
+      "machine_type": "amd64",
+      "architecture": "x64",
+      "subsystem": "windows_gui",
+      "dll_characteristics": [
+        "dynamic_base",
+        "nx_compat"
+      ],
+      "product_name": "Utility Functions Library",
+      "product_version": "1.0.0",
+      "file_version": "1.0.0.500",
+      "company_name": "Internal Development",
+      "file_description": "Common utility functions",
+      "internal_name": "utils",
+      "legal_copyright": "\u00a9 2024 Internal Development. All rights reserved.",
+      "original_filename": "utils.dll",
+      "imported_dlls": [
+        "kernel32.dll"
+      ],
+      "exported_functions": [
+        "UtilsStringHelper",
+        "UtilsFileHelper",
+        "UtilsMemoryHelper"
+      ],
+      "is_signed": false,
+      "checksum": "0x11223344",
+      "scan_timestamp": "2025-09-18T01:52:49.882455",
+      "analysis_errors": []
+    }
+  ]
+}
