@@ -488,6 +488,10 @@ class TestCycloneDXExporter:
         assert "dll.legal_copyright" in json_output
         assert "Copyright (C) 2025 Test Corp" in json_output
 
+        # Verify new generic properties for better Windows Properties compatibility
+        assert "dll.version" in json_output  # Generic version property
+        assert "dll.copyright" in json_output  # Alternative copyright property
+
 
 # Integration tests
 class TestIntegration:

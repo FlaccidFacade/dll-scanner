@@ -310,6 +310,14 @@ class CycloneDXExporter:
                 Property(name="dll.file_version", value=dll_metadata.file_version)
             )
 
+        # Add a generic "version" property that matches what users expect from Windows Properties
+        # This prioritizes file_version over product_version as it's typically more specific
+        primary_version = dll_metadata.file_version or dll_metadata.product_version
+        if primary_version:
+            component.properties.add(
+                Property(name="dll.version", value=primary_version)
+            )
+
         if dll_metadata.internal_name:
             component.properties.add(
                 Property(name="dll.internal_name", value=dll_metadata.internal_name)
@@ -325,6 +333,12 @@ class CycloneDXExporter:
         if dll_metadata.legal_copyright:
             component.properties.add(
                 Property(name="dll.legal_copyright", value=dll_metadata.legal_copyright)
+            )
+
+        # Add a copyright property that matches Windows Properties naming
+        if dll_metadata.legal_copyright:
+            component.properties.add(
+                Property(name="dll.copyright", value=dll_metadata.legal_copyright)
             )
 
         # Add security properties

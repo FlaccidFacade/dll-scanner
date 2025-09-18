@@ -222,6 +222,39 @@ class DLLMetadataExtractor:
         try:
             if hasattr(pe, "VS_VERSIONINFO"):
                 for version_info in pe.VS_VERSIONINFO:
+                    # Extract binary version information from FixedFileInfo
+                    if hasattr(version_info, "FixedFileInfo"):
+                        fixed_info = version_info.FixedFileInfo[0]
+
+                        # Extract file version from binary format (HIWORD.LOWORD.HIWORD.LOWORD)
+                        if hasattr(fixed_info, "FileVersionMS") and hasattr(
+                            fixed_info, "FileVersionLS"
+                        ):
+                            file_ver_ms = fixed_info.FileVersionMS
+                            file_ver_ls = fixed_info.FileVersionLS
+                            if (
+                                file_ver_ms or file_ver_ls
+                            ):  # Only if version info exists
+                                file_version = f"{file_ver_ms >> 16}.{file_ver_ms & 0xFFFF}.{file_ver_ls >> 16}.{file_ver_ls & 0xFFFF}"
+                                # Only set if we don't already have a string version or if binary differs
+                                if not metadata.file_version:
+                                    metadata.file_version = file_version
+
+                        # Extract product version from binary format
+                        if hasattr(fixed_info, "ProductVersionMS") and hasattr(
+                            fixed_info, "ProductVersionLS"
+                        ):
+                            prod_ver_ms = fixed_info.ProductVersionMS
+                            prod_ver_ls = fixed_info.ProductVersionLS
+                            if (
+                                prod_ver_ms or prod_ver_ls
+                            ):  # Only if version info exists
+                                product_version = f"{prod_ver_ms >> 16}.{prod_ver_ms & 0xFFFF}.{prod_ver_ls >> 16}.{prod_ver_ls & 0xFFFF}"
+                                # Only set if we don't already have a string version
+                                if not metadata.product_version:
+                                    metadata.product_version = product_version
+
+                    # Extract string version information from StringFileInfo
                     if hasattr(version_info, "StringFileInfo"):
                         for string_file_info in version_info.StringFileInfo:
                             for string_table in string_file_info.StringTable:
@@ -246,6 +279,15 @@ class DLLMetadataExtractor:
                                         metadata.legal_copyright = value_str
                                     elif key_str == "OriginalFilename":
                                         metadata.original_filename = value_str
+                                    # Handle additional version variants that might appear in Windows Properties
+                                    elif (
+                                        key_str == "Version"
+                                        and not metadata.file_version
+                                    ):
+                                        metadata.file_version = value_str
+                                    elif key_str == "LegalTrademarks":
+                                        # Some DLLs have trademark info that might be useful
+                                        pass
         except Exception as e:
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
 
