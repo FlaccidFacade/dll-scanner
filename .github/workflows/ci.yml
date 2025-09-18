@@ -55,7 +55,7 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ -v --cov=dll_scanner --cov-report=xml --cov-report=term-missing
+        pytest tests/ -v --cov=dll_scanner --cov-report=xml --cov-report=term-missing --junit-xml=test-results.xml
 
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
@@ -63,7 +63,12 @@ jobs:
       with:
         file: ./coverage.xml
         fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always() && matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
+      with:
+        files: "test-results.xml"
 
   test-debian:
     name: "Test on Debian Python ${{ matrix.python-version }}"
