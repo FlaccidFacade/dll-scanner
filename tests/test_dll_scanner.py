@@ -426,9 +426,7 @@ class TestCycloneDXExporter:
         # Verify specific purl format for DLL component
         dll_component = bom_data["components"][0]
         expected_purl_start = "pkg:dll/test-company/sample.dll@1.0.0"
-        assert dll_component["purl"].startswith(
-            expected_purl_start
-        ), (
+        assert dll_component["purl"].startswith(expected_purl_start), (
             f"DLL component purl should start with '{expected_purl_start}': "
             f"{dll_component['purl']}"
         )
@@ -605,8 +603,7 @@ class TestIntegration:
             # Test: Verify that we can extract PE information
             # Even our minimal DLL should have basic PE information
             assert (
-                metadata.architecture is not None
-                or metadata.machine_type is not None
+                metadata.architecture is not None or metadata.machine_type is not None
             ), "Scanner should extract at least basic PE information"
 
             # For this test, we consider it a "pass" if:
@@ -790,9 +787,7 @@ class TestIntegration:
                 assert (
                     metadata.product_version == "2.1.0"
                 ), f"Expected product version 2.1.0, got {metadata.product_version}"
-                assert (
-                    metadata.company_name == "Test Company Inc."
-                ), (
+                assert metadata.company_name == "Test Company Inc.", (
                     f"Expected company name 'Test Company Inc.', "
                     f"got {metadata.company_name}"
                 )
@@ -827,6 +822,204 @@ class TestIntegration:
         finally:
             # Clean up the temporary DLL
             cleanup_sample_dll(dll_path)
+
+    def test_end_to_end_dll_scanner_with_cyclonedx_output(self):
+        """
+        End-to-end test that literally installs a .dll file and runs the dll-scanner
+        solution on it, then examines the created CycloneDX JSON file.
+
+        This test addresses the specific feedback to create a test that:
+        1. Literally installs a .dll file
+        2. Literally runs the dll-scanner solution
+        3. Examines the created CycloneDX JSON file
+        """
+        import subprocess
+        import json
+        import tempfile
+        import sys
+        from pathlib import Path
+        from .sample_dll_data import create_sample_dll_with_version, cleanup_sample_dll
+
+        # Step 1: Create and "install" a DLL file
+        dll_path = create_sample_dll_with_version()
+
+        # Create a dedicated test directory to make it more realistic
+        with tempfile.TemporaryDirectory(prefix="dll_install_test_") as test_dir:
+            test_dir_path = Path(test_dir)
+
+            # "Install" the DLL by copying it to our test directory
+            installed_dll_path = test_dir_path / "installed_sample.dll"
+            installed_dll_path.write_bytes(dll_path.read_bytes())
+
+            # Create output file path for CycloneDX JSON
+            cyclonedx_output_path = test_dir_path / "scan_results.json"
+
+            try:
+                # Step 2: Literally run the dll-scanner solution using CLI
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "dll_scanner.cli",
+                    "scan",
+                    str(test_dir_path),
+                    "--cyclonedx",
+                    "--output",
+                    str(cyclonedx_output_path),
+                    "--project-name",
+                    "Test DLL Installation",
+                    "--project-version",
+                    "1.0.0",
+                ]
+
+                print(f"Running command: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+                # Verify the CLI command succeeded
+                assert result.returncode == 0, (
+                    f"dll-scanner command failed with return code {result.returncode}\n"
+                    f"STDOUT: {result.stdout}\n"
+                    f"STDERR: {result.stderr}"
+                )
+
+                print("✓ dll-scanner CLI command executed successfully")
+                print("CLI Output:")
+                print(result.stdout)
+
+                # Step 3: Examine the created CycloneDX JSON file
+                assert (
+                    cyclonedx_output_path.exists()
+                ), f"CycloneDX output file was not created at {cyclonedx_output_path}"
+
+                print(f"✓ CycloneDX JSON file created: {cyclonedx_output_path}")
+
+                # Load and parse the JSON file
+                with open(cyclonedx_output_path, "r") as f:
+                    cyclonedx_data = json.load(f)
+
+                # Verify the CycloneDX structure
+                assert "bomFormat" in cyclonedx_data, "CycloneDX should have bomFormat"
+                assert (
+                    cyclonedx_data["bomFormat"] == "CycloneDX"
+                ), "Should be CycloneDX format"
+                assert "components" in cyclonedx_data, "Should have components"
+
+                print("✓ CycloneDX JSON structure is valid")
+
+                # Verify our DLL is included in the components
+                components = cyclonedx_data["components"]
+                assert len(components) > 0, "Should have at least one component"
+
+                # Look for our installed DLL
+                dll_components = [
+                    comp for comp in components if comp.get("name", "").endswith(".dll")
+                ]
+
+                assert len(dll_components) > 0, "Should have at least one DLL component"
+
+                # Find our specific DLL
+                our_dll_component = None
+                for comp in dll_components:
+                    if "installed_sample.dll" in comp.get("name", ""):
+                        our_dll_component = comp
+                        break
+
+                assert (
+                    our_dll_component is not None
+                ), "Should find our installed_sample.dll in components"
+
+                print(f"✓ Found DLL component: {our_dll_component['name']}")
+
+                # Verify component properties
+                assert "purl" in our_dll_component, "Component should have purl"
+                assert (
+                    "properties" in our_dll_component
+                ), "Component should have properties"
+
+                # Check for DLL-specific properties
+                properties = our_dll_component["properties"]
+                property_names = [prop["name"] for prop in properties]
+
+                # Verify key properties are present
+                expected_properties = [
+                    "dll.architecture",
+                    "dll.file_path",
+                    "dll.file_size",
+                ]
+
+                for expected_prop in expected_properties:
+                    assert (
+                        expected_prop in property_names
+                    ), f"Should have {expected_prop} property"
+
+                print("✓ DLL component has expected properties")
+
+                # Print the component details for verification
+                print("\nDLL Component Details:")
+                print(f"  Name: {our_dll_component['name']}")
+                print(f"  Type: {our_dll_component.get('type', 'N/A')}")
+                print(f"  PURL: {our_dll_component.get('purl', 'N/A')}")
+                print("  Properties:")
+                for prop in properties:
+                    print(f"    {prop['name']}: {prop['value']}")
+
+                # Verify project metadata
+                metadata = cyclonedx_data.get("metadata", {})
+                component = metadata.get("component", {})
+
+                assert (
+                    component.get("name") == "Test DLL Installation"
+                ), "Project name should match"
+                assert (
+                    component.get("version") == "1.0.0"
+                ), "Project version should match"
+
+                print("✓ Project metadata is correct")
+
+                # Check scan properties in metadata
+                meta_properties = metadata.get("properties", [])
+                meta_property_names = [prop["name"] for prop in meta_properties]
+
+                scan_properties = [
+                    "scan.total_dlls_found",
+                    "scan.path",
+                    "scan.duration_seconds",
+                ]
+
+                for scan_prop in scan_properties:
+                    assert (
+                        scan_prop in meta_property_names
+                    ), f"Should have {scan_prop} in metadata properties"
+
+                print("✓ Scan metadata properties are present")
+
+                # Verify that at least one DLL was found
+                total_dlls_prop = next(
+                    prop
+                    for prop in meta_properties
+                    if prop["name"] == "scan.total_dlls_found"
+                )
+                total_dlls = int(total_dlls_prop["value"])
+                assert total_dlls >= 1, "Should have found at least 1 DLL"
+
+                print(f"✓ Scan found {total_dlls} DLL(s)")
+
+                # Final validation: This test proves that the dll-scanner can:
+                # 1. Process an installed DLL file
+                # 2. Generate valid CycloneDX SBOM output
+                # 3. Include the DLL as a component with proper metadata
+                # 4. Record version information when available (architecture, size, etc.)
+
+                print("\n✅ End-to-end test PASSED:")
+                print("  ✓ DLL file was literally installed")
+                print("  ✓ dll-scanner CLI was literally executed")
+                print("  ✓ CycloneDX JSON file was created and examined")
+                print("  ✓ DLL component was properly recorded with metadata")
+
+            finally:
+                # Clean up
+                cleanup_sample_dll(dll_path)
+                if cyclonedx_output_path.exists():
+                    cyclonedx_output_path.unlink()
 
 
 if __name__ == "__main__":
