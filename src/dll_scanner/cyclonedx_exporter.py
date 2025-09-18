@@ -145,7 +145,7 @@ class CycloneDXExporter:
         dll_scanner_tool = Tool(
             vendor="DLL Scanner Contributors",
             name="dll-scanner",
-            version="0.1.0",
+            version="0.4.1",
         )
         bom.metadata.tools.tools.add(dll_scanner_tool)
 
@@ -218,6 +218,11 @@ class CycloneDXExporter:
         """
         # Create component name and version
         component_name = dll_metadata.file_name or "unknown.dll"
+
+        # For version, prioritize in this order:
+        # 1. file_version (most specific to the DLL itself)
+        # 2. product_version (may be shared across multiple files)
+        # 3. "unknown" if neither is available
         component_version = (
             dll_metadata.file_version or dll_metadata.product_version or "unknown"
         )
@@ -309,15 +314,6 @@ class CycloneDXExporter:
             component.properties.add(
                 Property(name="dll.file_version", value=dll_metadata.file_version)
             )
-
-        # Add a generic "version" property that matches what users expect from Windows Properties
-        # This prioritizes file_version over product_version as it's typically more specific
-        primary_version = dll_metadata.file_version or dll_metadata.product_version
-        if primary_version:
-            component.properties.add(
-                Property(name="dll.version", value=primary_version)
-            )
-
         if dll_metadata.internal_name:
             component.properties.add(
                 Property(name="dll.internal_name", value=dll_metadata.internal_name)
@@ -329,22 +325,26 @@ class CycloneDXExporter:
                     name="dll.original_filename", value=dll_metadata.original_filename
                 )
             )
+        
+        if dll_metadata.copyright:
+            component.properties.add(
+                Property(name="dll.copyright", value=dll_metadata.copyright)
+            )
+
 
         if dll_metadata.legal_copyright:
             component.properties.add(
                 Property(name="dll.legal_copyright", value=dll_metadata.legal_copyright)
             )
 
-        # Add a copyright property that matches Windows Properties naming
-        if dll_metadata.legal_copyright:
-            component.properties.add(
-                Property(name="dll.copyright", value=dll_metadata.legal_copyright)
-            )
+            # Set the copyright field in the component itself for better visibility
+            component.legal_copyright = dll_metadata.legal_copyright
 
-        # Add security properties
-        component.properties.add(
-            Property(name="dll.is_signed", value=str(dll_metadata.is_signed))
-        )
+        # Add security/signing properties
+        if dll_metadata.is_signed:
+            component.properties.add(
+                Property(name="dll.is_signed", value=str(dll_metadata.is_signed))
+            )
 
         if dll_metadata.checksum:
             component.properties.add(

@@ -37,6 +37,7 @@ class DLLMetadata:
     company_name: Optional[str] = None
     file_description: Optional[str] = None
     internal_name: Optional[str] = None
+    copyright: Optional[str] = None
     legal_copyright: Optional[str] = None
     original_filename: Optional[str] = None
 
@@ -282,6 +283,16 @@ class DLLMetadataExtractor:
                                     # Handle additional version variants that might appear in Windows Properties
                                     elif (
                                         key_str == "Version"
+                                        and not metadata.file_version
+                                    ):
+                                        metadata.file_version = value_str
+                                    elif (
+                                        key_str == "Assembly Version"
+                                        and not metadata.file_version
+                                    ):
+                                        metadata.file_version = value_str
+                                    elif (
+                                        key_str == "PrivateBuild"
                                         and not metadata.file_version
                                     ):
                                         metadata.file_version = value_str

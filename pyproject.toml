@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dll-scanner"
-version = "0.3.0"
+version = "0.4.1"
 description = "A Python tool to scan directories for DLL files and extract metadata"
 readme = "README.md"
 license = {text = "MIT"}
