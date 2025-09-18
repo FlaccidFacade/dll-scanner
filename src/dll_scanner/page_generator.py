@@ -242,7 +242,7 @@ class PageGenerator:
 
     def _calculate_summary_stats(self, scan_result: ScanResult) -> Dict[str, Any]:
         """Calculate summary statistics from scan result."""
-        architectures = {}
+        architectures: Dict[str, int] = {}
         signed_count = 0
 
         for dll in scan_result.dll_files:
@@ -302,10 +302,10 @@ class PageGenerator:
         with open(changelog_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        entries = []
+        entries: List[Dict[str, Any]] = []
         lines = content.split("\n")
-        current_entry = None
-        current_section = None
+        current_entry: Optional[Dict[str, Any]] = None
+        current_section: Optional[str] = None
 
         for line in lines:
             line = line.strip()
