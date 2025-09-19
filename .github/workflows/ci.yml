@@ -112,7 +112,7 @@ jobs:
 
   build:
     name: "Build Package"
-    needs: [test, test-debian, pre-commit]
+    needs: [test, test-debian]
     runs-on: ubuntu-latest
     
     steps:
