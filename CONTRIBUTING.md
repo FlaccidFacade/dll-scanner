@@ -51,6 +51,12 @@ This configuration helps maintain code consistency and leverages project-specifi
 
 ### Running Quality Checks
 
+**⚠️ MANDATORY: Always format before committing:**
+```bash
+# Format code (REQUIRED before every commit)
+black src/ tests/
+```
+
 ```bash
 # Run all pre-commit hooks on all files
 pre-commit run --all-files
@@ -59,7 +65,7 @@ pre-commit run --all-files
 pre-commit run black --all-files
 
 # Manual quality checks
-# Format code
+# Format code (MANDATORY)
 black src/ tests/
 
 # Check formatting
