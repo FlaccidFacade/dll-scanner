@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
+from . import __version__
+
 if TYPE_CHECKING:
     from cyclonedx.model.bom import Bom, Tool
     from cyclonedx.model.component import Component, ComponentType, ComponentScope
@@ -145,7 +147,7 @@ class CycloneDXExporter:
         dll_scanner_tool = Tool(
             vendor="DLL Scanner Contributors",
             name="dll-scanner",
-            version="0.4.1",
+            version=__version__,
         )
         bom.metadata.tools.tools.add(dll_scanner_tool)
 
@@ -314,6 +316,12 @@ class CycloneDXExporter:
             component.properties.add(
                 Property(name="dll.file_version", value=dll_metadata.file_version)
             )
+
+        # Add generic version property for better compatibility
+        if component_version and component_version != "unknown":
+            component.properties.add(
+                Property(name="dll.version", value=component_version)
+            )
         if dll_metadata.internal_name:
             component.properties.add(
                 Property(name="dll.internal_name", value=dll_metadata.internal_name)
@@ -338,6 +346,12 @@ class CycloneDXExporter:
 
             # Set the copyright field in the component itself for better visibility
             component.copyright = dll_metadata.legal_copyright
+
+            # Also add as generic copyright property if no specific copyright field exists
+            if not dll_metadata.copyright:
+                component.properties.add(
+                    Property(name="dll.copyright", value=dll_metadata.legal_copyright)
+                )
 
         # Add security/signing properties
         if dll_metadata.is_signed is not None:
