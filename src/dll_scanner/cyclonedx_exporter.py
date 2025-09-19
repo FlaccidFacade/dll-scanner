@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
+from . import __version__
+
 if TYPE_CHECKING:
     from cyclonedx.model.bom import Bom, Tool
     from cyclonedx.model.component import Component, ComponentType, ComponentScope
@@ -145,7 +147,7 @@ class CycloneDXExporter:
         dll_scanner_tool = Tool(
             vendor="DLL Scanner Contributors",
             name="dll-scanner",
-            version="0.4.1",
+            version=__version__,
         )
         bom.metadata.tools.tools.add(dll_scanner_tool)
 

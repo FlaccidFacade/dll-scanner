@@ -301,13 +301,14 @@ class TestCLI:
     def test_cli_version(self):
         """Test CLI version command."""
         from dll_scanner.cli import cli
+        from dll_scanner import __version__
         from click.testing import CliRunner
 
         runner = CliRunner()
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.4.1" in result.output
+        assert __version__ in result.output
 
 
 class TestCycloneDXExporter:
@@ -498,7 +499,7 @@ class TestVersionManagement:
     """Test version management functionality."""
 
     def test_version_extraction_from_pyproject(self):
-        """Test that version can be extracted from pyproject.toml."""
+        """Test that version is configured as dynamic in pyproject.toml."""
         import tomllib
         from pathlib import Path
 
@@ -511,43 +512,40 @@ class TestVersionManagement:
         with open(pyproject_path, "rb") as f:
             data = tomllib.load(f)
 
-        version = data["project"]["version"]
-        assert version is not None
-        assert isinstance(version, str)
-        assert len(version.split(".")) >= 2  # Should be at least major.minor
+        # Version should be configured as dynamic
+        dynamic_fields = data["project"]["dynamic"]
+        assert "version" in dynamic_fields, "Version should be in dynamic fields"
 
-        # Version should match semantic versioning pattern
-        import re
-
-        semver_pattern = r"^\d+\.\d+\.\d+(\-[a-zA-Z0-9\-]+)?(\+[a-zA-Z0-9\-]+)?$"
-        assert re.match(
-            semver_pattern, version
-        ), f"Version {version} should follow semantic versioning"
+        # Dynamic version should be configured to read from dll_scanner.__version__
+        dynamic_config = data["tool"]["setuptools"]["dynamic"]
+        version_config = dynamic_config["version"]
+        assert version_config["attr"] == "dll_scanner.__version__", (
+            "Dynamic version should read from dll_scanner.__version__"
+        )
 
     def test_version_consistency(self):
-        """Test that version is consistent between pyproject.toml and __init__.py."""
-        import tomllib
-        from pathlib import Path
+        """Test that __init__.py has a valid version (single source of truth)."""
         import sys
-
-        # Get version from pyproject.toml
-        current_dir = Path(__file__).parent.parent
-        pyproject_path = current_dir / "pyproject.toml"
-
-        with open(pyproject_path, "rb") as f:
-            data = tomllib.load(f)
-        pyproject_version = data["project"]["version"]
+        from pathlib import Path
+        import re
 
         # Get version from __init__.py
+        current_dir = Path(__file__).parent.parent
         sys.path.insert(0, str(current_dir / "src"))
         import dll_scanner
 
         init_version = dll_scanner.__version__
 
-        assert pyproject_version == init_version, (
-            f"Version mismatch: pyproject.toml has {pyproject_version}, "
-            f"__init__.py has {init_version}"
-        )
+        # Version should be valid
+        assert init_version is not None
+        assert isinstance(init_version, str)
+        assert len(init_version.split(".")) >= 2  # Should be at least major.minor
+
+        # Version should match semantic versioning pattern
+        semver_pattern = r"^\d+\.\d+\.\d+(\-[a-zA-Z0-9\-]+)?(\+[a-zA-Z0-9\-]+)?$"
+        assert re.match(
+            semver_pattern, init_version
+        ), f"Version {init_version} should follow semantic versioning"
 
 
 # Integration tests
