@@ -1,5 +1,7 @@
 # DLL Scanner - GitHub Copilot Instructions
 
+**🚨 CRITICAL: Before ANY commit or report_progress call, you MUST run: `black src/ tests/`**
+
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
 > **Note**: This project is configured to use the `#codebase` semantic search tool by default for all GitHub Copilot interactions. This configuration is enforced through the `.github/copilot.yml` file.
@@ -13,6 +15,7 @@ DLL Scanner is a powerful Python tool for scanning directories to find DLL files
 **NEVER CANCEL any of these commands - builds and tests may take several minutes:**
 
 - Set up development environment: `pip install -e ".[dev]"` -- takes 1-2 minutes to install all dependencies
+- **Install pre-commit hooks: `pre-commit install`** -- ensures automatic formatting on commits (recommended but may fail in CI environments)
 - Run tests: `pytest tests/ -v` -- takes ~5 seconds. NEVER CANCEL - set timeout to 30+ seconds for safety
 - Run tests with coverage: `pytest tests/ -v --cov=dll_scanner --cov-report=term-missing` -- takes ~5 seconds
 - Format code: `black src/ tests/` -- takes <1 second
@@ -54,11 +57,26 @@ analysis_results = analyzer.analyze_dependencies(
 
 ## Validation
 
+**MANDATORY: Always format code before any commit or report_progress call:**
+```bash
+# Format code automatically (REQUIRED before every commit)
+black src/ tests/
+
+# Alternative: Use the format check script
+./scripts/format-check.sh  # Check formatting only
+```
+
 **ALWAYS run these quality checks before committing:**
-- `black src/ tests/` -- format code
+- `black src/ tests/` -- format code (MANDATORY - must be run first)
 - `flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503` -- lint code
 - `mypy src/dll_scanner --ignore-missing-imports` -- type checking
 - `pytest tests/ -v --cov=dll_scanner` -- run tests with coverage
+
+**Pre-commit Formatting Rule:** 
+- You MUST run `black src/ tests/` immediately before every `report_progress` call
+- This ensures all committed code is properly formatted and passes CI checks
+- Never skip this step, even for small changes
+- Use `./scripts/format-check.sh` to verify formatting without making changes
 
 **Manual Testing Scenarios:**
 After making changes, ALWAYS test at least one complete end-to-end scenario:

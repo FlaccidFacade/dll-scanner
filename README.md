@@ -12,7 +12,7 @@ A powerful Python tool for scanning directories to find DLL files, extracting co
 - 🔍 **Recursive Directory Scanning**: Scan entire directory trees for DLL files
 - 📊 **Comprehensive Metadata Extraction**: Extract detailed information from PE headers including:
   - Architecture and machine type
-  - Version information (product, file, company)
+  - Version information (product, file, company) with enhanced Microsoft DLL support
   - Import/export tables
   - Security characteristics
   - Digital signature status
@@ -295,16 +295,36 @@ For more details, see the [Pages Documentation](pages/README.md).
   "errors": [],
   "dll_files": [
     {
+      "file_name": "kernel32.dll",
+      "file_path": "/path/to/kernel32.dll",
+      "file_size": 663552,
+      "architecture": "x64",
+      "machine_type": "amd64",
+      "company_name": "Microsoft Corporation",
+      "product_name": "Microsoft® Windows® Operating System",
+      "product_version": "10.0.19041.1901",
+      "file_version": "10.0.19041.1901 (WinBuild.160101.0800)",
+      "file_description": "Windows NT Base API Client DLL",
+      "internal_name": "kernel32",
+      "legal_copyright": "© Microsoft Corporation. All rights reserved.",
+      "original_filename": "KERNEL32.DLL",
+      "imported_dlls": ["ntdll.dll", "KERNELBASE.dll"],
+      "exported_functions": ["CreateFileA", "CreateFileW", "ReadFile", "WriteFile"],
+      "is_signed": true,
+      "checksum": "0x5B2D1E8F"
+    },
+    {
       "file_name": "example.dll",
       "file_path": "/path/to/example.dll",
       "file_size": 65536,
       "architecture": "x64",
       "machine_type": "amd64",
-      "company_name": "Microsoft Corporation",
-      "product_version": "10.0.19041.1",
+      "company_name": "Example Corporation",
+      "product_version": "2.1.0",
+      "file_version": "2.1.0.123",
       "imported_dlls": ["kernel32.dll", "user32.dll"],
       "exported_functions": ["ExampleFunction", "AnotherFunction"],
-      "is_signed": true
+      "is_signed": false
     }
   ]
 }

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-01-XX
+
+### Added
+- Enhanced Microsoft DLL version extraction with VarFileInfo translation support
+- Support for language-specific string tables in Microsoft system DLLs
+- Automatic enumeration of available translations from VarFileInfo\Translation entries
+- Robust fallback mechanism for third-party DLLs without translation information
+- Comprehensive test coverage for Microsoft DLL version extraction scenarios
+
+### Changed
+- Improved version information extraction for Microsoft-signed DLLs (kernel32.dll, ntdll.dll, etc.)
+- Enhanced metadata extraction now properly handles translation keys (e.g., "040904b0" for US English/Unicode)
+- Better error handling for malformed or missing version resources
+
+### Fixed
+- Microsoft DLL version extraction now correctly reads FileVersion, ProductVersion, CompanyName, FileDescription, OriginalFilename from translated string tables
+- Type annotations added for all new helper methods to satisfy mypy requirements
+
 ## [0.3.0] - 2025-01-XX
 
 ### Added
