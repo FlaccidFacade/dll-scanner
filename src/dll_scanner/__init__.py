@@ -16,6 +16,7 @@ from .metadata import DLLMetadata
 from .analyzer import DependencyAnalyzer
 from .cyclonedx_exporter import CycloneDXExporter
 from .page_generator import PageGenerator
+from .wix_integration import WiXIntegration
 
 __all__ = [
     "DLLScanner",
@@ -23,4 +24,5 @@ __all__ = [
     "DependencyAnalyzer",
     "CycloneDXExporter",
     "PageGenerator",
+    "WiXIntegration",
 ]

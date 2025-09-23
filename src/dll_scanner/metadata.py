@@ -52,6 +52,7 @@ class DLLMetadata:
     # Analysis metadata
     scan_timestamp: Optional[datetime] = None
     analysis_errors: List[str] = field(default_factory=list)
+    additional_metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.scan_timestamp is None:
