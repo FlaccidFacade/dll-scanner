@@ -222,6 +222,13 @@ class DLLMetadataExtractor:
     def _extract_version_info(self, pe: "pefile.PE", metadata: DLLMetadata) -> None:
         """Extract version information from resources."""
         try:
+            # First try the alternative FileInfo approach which may work better
+            # for some Microsoft DLLs
+            if self._extract_version_info_fileinfo(pe, metadata):
+                # If FileInfo approach succeeded, we can return early
+                return
+
+            # Fallback to the original VS_VERSIONINFO approach
             if hasattr(pe, "VS_VERSIONINFO"):
                 for version_info in pe.VS_VERSIONINFO:
                     # Extract binary version information from FixedFileInfo
@@ -285,6 +292,85 @@ class DLLMetadataExtractor:
 
         except Exception as e:
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
+
+    def _extract_version_info_fileinfo(
+        self, pe: "pefile.PE", metadata: DLLMetadata
+    ) -> bool:
+        """
+        Extract version information using FileInfo approach.
+        This alternative method may work better for some Microsoft DLLs.
+
+        Args:
+            pe: PE file object
+            metadata: DLL metadata to populate
+
+        Returns:
+            True if version information was successfully extracted, False otherwise
+        """
+        if not hasattr(pe, "FileInfo") or not pe.FileInfo:
+            return False
+
+        extracted = False
+
+        try:
+            for fileinfo in pe.FileInfo:
+                if fileinfo.Key != b"StringFileInfo":
+                    continue
+
+                # Iterate all StringTables (multiple translations)
+                for st in fileinfo.StringTable:
+                    for key, value in st.entries.items():
+                        decoded_key = (
+                            key.decode(errors="ignore")
+                            if isinstance(key, bytes)
+                            else str(key)
+                        )
+                        decoded_value = (
+                            value.decode(errors="ignore")
+                            if isinstance(value, bytes)
+                            else str(value)
+                        )
+
+                        if decoded_key == "FileVersion":
+                            metadata.file_version = decoded_value
+                            extracted = True
+                        elif decoded_key == "ProductVersion":
+                            metadata.product_version = decoded_value
+                            extracted = True
+                        elif decoded_key == "CompanyName":
+                            metadata.company_name = decoded_value
+                            extracted = True
+                        elif decoded_key == "FileDescription":
+                            metadata.file_description = decoded_value
+                            extracted = True
+                        elif decoded_key == "OriginalFilename":
+                            metadata.original_filename = decoded_value
+                            extracted = True
+                        elif decoded_key == "ProductName":
+                            metadata.product_name = decoded_value
+                            extracted = True
+                        elif decoded_key == "InternalName":
+                            metadata.internal_name = decoded_value
+                            extracted = True
+                        elif decoded_key == "LegalCopyright":
+                            metadata.legal_copyright = decoded_value
+                            extracted = True
+
+                    # If we found version information, check if we have the essential fields
+                    if (
+                        metadata.file_version
+                        or metadata.product_version
+                        or metadata.company_name
+                        or metadata.file_description
+                        or metadata.original_filename
+                    ):
+                        return True
+
+        except Exception:
+            # If FileInfo approach fails, let the fallback handle it
+            pass
+
+        return extracted
 
     def _get_version_translations(self, version_info: Any) -> List[str]:
         """
