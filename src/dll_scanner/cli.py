@@ -98,6 +98,11 @@ def cli(ctx: click.Context, verbose: bool) -> None:
     default="1.0.0",
     help="Project version for CycloneDX SBOM (default: '1.0.0')",
 )
+@click.option(
+    "--wix",
+    is_flag=True,
+    help="Enable WiX metadata extraction for enhanced Windows DLL analysis",
+)
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -111,6 +116,7 @@ def scan(
     cyclonedx: bool,
     project_name: str,
     project_version: str,
+    wix: bool,
 ) -> None:
     """Scan a directory for DLL files and extract metadata."""
     console: Console = ctx.obj["console"]
@@ -146,6 +152,48 @@ def scan(
         # Perform scan
         with console.status("[bold green]Scanning for DLL files..."):
             scan_result = scanner.scan_directory(directory, recursive, parallel)
+
+        # Enhance with WiX metadata if requested
+        if wix:
+            console.print(f"[blue]WiX enhancement:[/blue] Enabled")
+            try:
+                from .wix_integration import WiXIntegration
+
+                wix_integration = WiXIntegration(logger=logger)
+
+                if not wix_integration.is_windows():
+                    console.print(
+                        "[yellow]⚠️  Warning:[/yellow] WiX Toolset is only available on Windows"
+                    )
+                    console.print("Proceeding with standard scan results...")
+                else:
+                    if not wix_integration.is_available():
+                        console.print(
+                            "📥 WiX not available locally, attempting to download..."
+                        )
+                        if wix_integration.download_wix():
+                            console.print(
+                                "[green]✅ WiX Toolset downloaded successfully[/green]"
+                            )
+                        else:
+                            console.print(
+                                "[yellow]⚠️  Failed to download WiX Toolset, proceeding without WiX enhancement[/yellow]"
+                            )
+
+                    if wix_integration.is_available():
+                        console.print("🚀 Enhancing scan results with WiX metadata...")
+                        scan_result = wix_integration.enhance_scan_result(scan_result)
+                        console.print("[green]✅ WiX enhancement completed[/green]")
+
+            except ImportError as e:
+                console.print(
+                    f"[yellow]Warning:[/yellow] WiX integration not available: {e}"
+                )
+                console.print("Proceeding with standard scan results...")
+            except Exception as e:
+                logger.error(f"WiX enhancement failed: {e}")
+                console.print(f"[yellow]Warning:[/yellow] WiX enhancement failed: {e}")
+                console.print("Proceeding with standard scan results...")
 
         # Display results
         _display_scan_results(console, scan_result)
@@ -230,6 +278,34 @@ def scan(
             console.print(
                 "[yellow]Warning:[/yellow] --cyclonedx flag requires --output to be specified"
             )
+
+        # Display WiX-specific information if used
+        if wix:
+            try:
+                from .wix_integration import WiXIntegration
+
+                wix_integration = WiXIntegration(logger=logger)
+
+                if wix_integration.is_windows() and wix_integration.is_available():
+                    wix_dll_count = sum(
+                        1
+                        for dll in scan_result.dll_files
+                        if dll.additional_metadata
+                        and dll.additional_metadata.get("wix_available", False)
+                    )
+                    if wix_dll_count > 0:
+                        console.print(
+                            f"\n[blue]ℹ️  WiX analysis applied to {wix_dll_count} DLL(s)[/blue]"
+                        )
+                        console.print(
+                            "[dim]WiX metadata includes component GUIDs, file IDs, and harvesting info[/dim]"
+                        )
+                    else:
+                        console.print(
+                            "\n[blue]ℹ️  WiX analysis was enabled but no enhanced metadata was extracted[/blue]"
+                        )
+            except ImportError:
+                pass  # Already handled above
 
     except Exception as e:
         console.print(f"[red]Error during scan:[/red] {str(e)}")
