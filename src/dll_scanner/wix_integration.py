@@ -250,7 +250,7 @@ class WiXIntegration:
             )
         finally:
             # Clean up temporary directory if we created it
-            if cleanup_output and output_dir.exists():
+            if cleanup_output and output_dir is not None and output_dir.exists():
                 try:
                     shutil.rmtree(output_dir)
                 except Exception as e:
@@ -268,7 +268,7 @@ class WiXIntegration:
         Returns:
             Dictionary containing extracted metadata
         """
-        metadata = {}
+        metadata: Dict[str, Any] = {}
 
         if not wxs_file.exists():
             return metadata
@@ -375,7 +375,7 @@ class WiXIntegration:
 
         for dll_metadata in scan_result.dll_files:
             # Run WiX analysis
-            wix_data = self.analyze_dll_with_wix(dll_metadata.file_path)
+            wix_data = self.analyze_dll_with_wix(Path(dll_metadata.file_path))
 
             # Create enhanced metadata
             enhanced_metadata = DLLMetadata(
