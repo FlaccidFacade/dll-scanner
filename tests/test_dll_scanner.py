@@ -845,7 +845,7 @@ class TestIntegration:
             # Mock version information structure with VarFileInfo translations
             mock_version_info = MagicMock()
             mock_fixed_info = MagicMock()
-            mock_fixed_info.FileVersionMS = 0x000A0000  # Version 10.0.x.x  
+            mock_fixed_info.FileVersionMS = 0x000A0000  # Version 10.0.x.x
             mock_fixed_info.FileVersionLS = 0x4A411B4D  # Version x.x.19041.1901
             mock_fixed_info.ProductVersionMS = 0x000A0000  # Product version 10.0.x.x
             mock_fixed_info.ProductVersionLS = 0x4A410000  # Product version x.x.19041.0
