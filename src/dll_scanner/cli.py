@@ -718,6 +718,160 @@ def generate_pages(
         sys.exit(1)
 
 
+@cli.command()
+@click.argument(
+    "directory", type=click.Path(exists=True, file_okay=False, path_type=Path)
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(path_type=Path),
+    help="Output file for WiX analysis results (JSON format)",
+)
+@click.option(
+    "--recursive/--no-recursive",
+    default=True,
+    help="Scan directories recursively (default: True)",
+)
+@click.option(
+    "--download-wix",
+    is_flag=True,
+    help="Force download WiX Toolset even if already available",
+)
+@click.option(
+    "--cyclonedx",
+    is_flag=True,
+    help="Export results in CycloneDX SBOM format with WiX metadata",
+)
+@click.option(
+    "--project-name",
+    default="WiX DLL Analysis Project",
+    help="Project name for CycloneDX SBOM (default: 'WiX DLL Analysis Project')",
+)
+@click.option(
+    "--project-version",
+    default="1.0.0",
+    help="Project version for CycloneDX SBOM (default: '1.0.0')",
+)
+@click.pass_context
+def wix(
+    ctx: click.Context,
+    directory: Path,
+    output: Optional[Path],
+    recursive: bool,
+    download_wix: bool,
+    cyclonedx: bool,
+    project_name: str,
+    project_version: str,
+) -> None:
+    """Analyze DLL files using WiX Toolset for enhanced Windows metadata."""
+    console: Console = ctx.obj["console"]
+    logger: logging.Logger = ctx.obj["logger"]
+
+    try:
+        from .wix_integration import WiXIntegration
+    except ImportError as e:
+        console.print(f"[red]Error:[/red] WiX integration not available: {e}")
+        sys.exit(1)
+
+    console.print(f"[bold blue]🔍 WiX DLL Analysis[/bold blue]")
+    console.print(f"📁 Target directory: {directory}")
+
+    try:
+        # Initialize WiX integration
+        wix = WiXIntegration(logger=logger)
+
+        # Check platform compatibility
+        if not wix.is_windows():
+            console.print(
+                "[yellow]⚠️  Warning:[/yellow] WiX Toolset is only available on Windows"
+            )
+            console.print("Falling back to standard DLL scanning...")
+
+            # Fall back to standard scanning
+            scanner = DLLScanner(logger=logger)
+            scan_result = scanner.scan_directory(directory, recursive=recursive)
+        else:
+            # Windows platform - use WiX enhanced analysis
+            if download_wix or not wix.is_available():
+                console.print("📥 Downloading WiX Toolset...")
+
+                with Progress() as progress:
+                    task = progress.add_task("[blue]Downloading WiX...", total=100)
+
+                    if wix.download_wix():
+                        progress.update(task, completed=100)
+                        console.print(
+                            "[green]✅ WiX Toolset downloaded successfully[/green]"
+                        )
+                    else:
+                        console.print("[red]❌ Failed to download WiX Toolset[/red]")
+                        console.print("Falling back to standard DLL scanning...")
+                        scanner = DLLScanner(logger=logger)
+                        scan_result = scanner.scan_directory(
+                            directory, recursive=recursive
+                        )
+
+            if wix.is_available():
+                console.print("🔧 Using WiX Toolset for enhanced analysis...")
+
+                # First do standard scan
+                scanner = DLLScanner(logger=logger)
+                scan_result = scanner.scan_directory(directory, recursive=recursive)
+
+                # Then enhance with WiX
+                console.print("🚀 Enhancing results with WiX metadata...")
+                scan_result = wix.enhance_scan_result(scan_result)
+                console.print("[green]✅ WiX enhancement completed[/green]")
+            else:
+                console.print(
+                    "[yellow]⚠️  WiX not available, using standard scanning[/yellow]"
+                )
+                scanner = DLLScanner(logger=logger)
+                scan_result = scanner.scan_directory(directory, recursive=recursive)
+
+        # Display results
+        _display_scan_results(console, scan_result)
+
+        # Output results
+        if output:
+            if cyclonedx:
+                exporter = CycloneDXExporter()
+                json_output = exporter.export_to_json(
+                    scan_result,
+                    project_name=project_name,
+                    project_version=project_version,
+                    output_file=output,
+                )
+                console.print(f"[green]✅ CycloneDX SBOM exported to:[/green] {output}")
+            else:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                with open(output, "w") as f:
+                    json.dump(scan_result.to_dict(), f, indent=2, default=str)
+                console.print(f"[green]✅ Results exported to:[/green] {output}")
+
+        # Show WiX-specific information if available
+        if wix.is_windows() and wix.is_available():
+            wix_dll_count = sum(
+                1
+                for dll in scan_result.dll_files
+                if dll.additional_metadata
+                and dll.additional_metadata.get("wix_available", False)
+            )
+            if wix_dll_count > 0:
+                console.print(
+                    f"\n[blue]ℹ️  WiX analysis applied to {wix_dll_count} DLL(s)[/blue]"
+                )
+                console.print(
+                    "[dim]WiX metadata includes component GUIDs, file IDs, and harvesting info[/dim]"
+                )
+
+    except Exception as e:
+        logger.error(f"WiX analysis failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        sys.exit(1)
+
+
 def main() -> None:
     """Main entry point for the CLI."""
     cli()
