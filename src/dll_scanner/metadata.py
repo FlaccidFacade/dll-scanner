@@ -227,7 +227,8 @@ class DLLMetadataExtractor:
                     if hasattr(version_info, "FixedFileInfo"):
                         fixed_info = version_info.FixedFileInfo[0]
 
-                        # Extract file version from binary format (HIWORD.LOWORD.HIWORD.LOWORD)
+                        # Extract file version from binary format
+                        # (HIWORD.LOWORD.HIWORD.LOWORD)
                         if hasattr(fixed_info, "FileVersionMS") and hasattr(
                             fixed_info, "FileVersionLS"
                         ):
@@ -236,8 +237,11 @@ class DLLMetadataExtractor:
                             if (
                                 file_ver_ms or file_ver_ls
                             ):  # Only if version info exists
-                                file_version = f"{file_ver_ms >> 16}.{file_ver_ms & 0xFFFF}.{file_ver_ls >> 16}.{file_ver_ls & 0xFFFF}"
-                                # Only set if we don't already have a string version or if binary differs
+                                file_version = (
+                                    f"{file_ver_ms >> 16}.{file_ver_ms & 0xFFFF}."
+                                    f"{file_ver_ls >> 16}.{file_ver_ls & 0xFFFF}"
+                                )
+                                # Only set if we don't already have a string version
                                 if not metadata.file_version:
                                     metadata.file_version = file_version
 
@@ -250,57 +254,177 @@ class DLLMetadataExtractor:
                             if (
                                 prod_ver_ms or prod_ver_ls
                             ):  # Only if version info exists
-                                product_version = f"{prod_ver_ms >> 16}.{prod_ver_ms & 0xFFFF}.{prod_ver_ls >> 16}.{prod_ver_ls & 0xFFFF}"
+                                product_version = (
+                                    f"{prod_ver_ms >> 16}.{prod_ver_ms & 0xFFFF}."
+                                    f"{prod_ver_ls >> 16}.{prod_ver_ls & 0xFFFF}"
+                                )
                                 # Only set if we don't already have a string version
                                 if not metadata.product_version:
                                     metadata.product_version = product_version
 
                     # Extract string version information from StringFileInfo
-                    if hasattr(version_info, "StringFileInfo"):
-                        for string_file_info in version_info.StringFileInfo:
-                            for string_table in string_file_info.StringTable:
-                                for entry in string_table.entries.items():
-                                    key, value = entry
-                                    key_str = key.decode("utf-8", errors="ignore")
-                                    value_str = value.decode("utf-8", errors="ignore")
+                    # First try to get translations from VarFileInfo to find
+                    # correct string tables
+                    translation_keys = self._get_version_translations(version_info)
 
-                                    if key_str == "ProductName":
-                                        metadata.product_name = value_str
-                                    elif key_str == "ProductVersion":
-                                        metadata.product_version = value_str
-                                    elif key_str == "FileVersion":
-                                        metadata.file_version = value_str
-                                    elif key_str == "CompanyName":
-                                        metadata.company_name = value_str
-                                    elif key_str == "FileDescription":
-                                        metadata.file_description = value_str
-                                    elif key_str == "InternalName":
-                                        metadata.internal_name = value_str
-                                    elif key_str == "LegalCopyright":
-                                        metadata.legal_copyright = value_str
-                                    elif key_str == "OriginalFilename":
-                                        metadata.original_filename = value_str
-                                    # Handle additional version variants that might appear in Windows Properties
-                                    elif (
-                                        key_str == "Version"
-                                        and not metadata.file_version
-                                    ):
-                                        metadata.file_version = value_str
-                                    elif (
-                                        key_str == "Assembly Version"
-                                        and not metadata.file_version
-                                    ):
-                                        metadata.file_version = value_str
-                                    elif (
-                                        key_str == "PrivateBuild"
-                                        and not metadata.file_version
-                                    ):
-                                        metadata.file_version = value_str
-                                    elif key_str == "LegalTrademarks":
-                                        # Some DLLs have trademark info that might be useful
-                                        pass
+                    # Extract using discovered translations
+                    if translation_keys:
+                        for translation_key in translation_keys:
+                            success = self._extract_string_version_info(
+                                version_info, metadata, translation_key
+                            )
+                            if success:
+                                # Successfully extracted with this translation, break
+                                break
+                    else:
+                        # Fallback: try default method for older or non-standard DLLs
+                        self._extract_string_version_info_fallback(
+                            version_info, metadata
+                        )
+
         except Exception as e:
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
+
+    def _get_version_translations(self, version_info) -> List[str]:
+        """
+        Extract available translations from VarFileInfo to find correct string tables.
+
+        Returns:
+            List of translation keys (e.g., ["040904b0", "040004b0"])
+        """
+        translation_keys = []
+
+        try:
+            if hasattr(version_info, "VarFileInfo"):
+                for var_file_info in version_info.VarFileInfo:
+                    if hasattr(var_file_info, "Var"):
+                        for var in var_file_info.Var:
+                            if hasattr(var, "entry") and var.entry:
+                                # Each translation entry contains language and codepage
+                                for lang_codepage in var.entry:
+                                    if hasattr(lang_codepage, "lang") and hasattr(
+                                        lang_codepage, "codepage"
+                                    ):
+                                        # Format: language (2 bytes) + codepage
+                                        # (2 bytes) as hex
+                                        lang = lang_codepage.lang & 0xFFFF
+                                        codepage = lang_codepage.codepage & 0xFFFF
+                                        translation_key = f"{lang:04x}{codepage:04x}"
+                                        translation_keys.append(translation_key)
+        except Exception:
+            # Ignore errors in translation extraction, fallback will handle it
+            pass
+
+        return translation_keys
+
+    def _extract_string_version_info(
+        self, version_info, metadata: DLLMetadata, translation_key: str
+    ) -> bool:
+        """
+        Extract string version information using a specific translation key.
+
+        Args:
+            version_info: PE version info structure
+            metadata: DLL metadata to populate
+            translation_key: Translation key (e.g., "040904b0")
+
+        Returns:
+            True if extraction was successful, False otherwise
+        """
+        try:
+            if hasattr(version_info, "StringFileInfo"):
+                for string_file_info in version_info.StringFileInfo:
+                    # Look for the specific string table that matches our translation
+                    for string_table in string_file_info.StringTable:
+                        # Check if this string table matches our translation key
+                        if (
+                            hasattr(string_table, "LangID")
+                            and string_table.LangID.lower() == translation_key.lower()
+                        ):
+                            return self._process_string_table_entries(
+                                string_table, metadata
+                            )
+        except Exception:
+            pass
+
+        return False
+
+    def _extract_string_version_info_fallback(
+        self, version_info, metadata: DLLMetadata
+    ) -> None:
+        """
+        Fallback method for extracting string version info when translation
+        lookup fails. This is the original logic for compatibility with
+        third-party DLLs.
+        """
+        try:
+            if hasattr(version_info, "StringFileInfo"):
+                for string_file_info in version_info.StringFileInfo:
+                    for string_table in string_file_info.StringTable:
+                        self._process_string_table_entries(string_table, metadata)
+        except Exception:
+            pass
+
+    def _process_string_table_entries(
+        self, string_table, metadata: DLLMetadata
+    ) -> bool:
+        """
+        Process entries from a string table and populate metadata.
+
+        Returns:
+            True if any version information was extracted
+        """
+        extracted = False
+
+        try:
+            if hasattr(string_table, "entries"):
+                for entry in string_table.entries.items():
+                    key, value = entry
+                    key_str = key.decode("utf-8", errors="ignore")
+                    value_str = value.decode("utf-8", errors="ignore")
+
+                    if key_str == "ProductName":
+                        metadata.product_name = value_str
+                        extracted = True
+                    elif key_str == "ProductVersion":
+                        metadata.product_version = value_str
+                        extracted = True
+                    elif key_str == "FileVersion":
+                        metadata.file_version = value_str
+                        extracted = True
+                    elif key_str == "CompanyName":
+                        metadata.company_name = value_str
+                        extracted = True
+                    elif key_str == "FileDescription":
+                        metadata.file_description = value_str
+                        extracted = True
+                    elif key_str == "InternalName":
+                        metadata.internal_name = value_str
+                        extracted = True
+                    elif key_str == "LegalCopyright":
+                        metadata.legal_copyright = value_str
+                        extracted = True
+                    elif key_str == "OriginalFilename":
+                        metadata.original_filename = value_str
+                        extracted = True
+                    # Handle additional version variants that might appear in
+                    # Windows Properties
+                    elif key_str == "Version" and not metadata.file_version:
+                        metadata.file_version = value_str
+                        extracted = True
+                    elif key_str == "Assembly Version" and not metadata.file_version:
+                        metadata.file_version = value_str
+                        extracted = True
+                    elif key_str == "PrivateBuild" and not metadata.file_version:
+                        metadata.file_version = value_str
+                        extracted = True
+                    elif key_str == "LegalTrademarks":
+                        # Some DLLs have trademark info that might be useful
+                        pass
+        except Exception:
+            pass
+
+        return extracted
 
     def _extract_import_export_info(
         self, pe: "pefile.PE", metadata: DLLMetadata

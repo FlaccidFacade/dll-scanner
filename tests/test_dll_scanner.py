@@ -823,6 +823,103 @@ class TestIntegration:
             # Clean up the temporary DLL
             cleanup_sample_dll(dll_path)
 
+    def test_microsoft_dll_version_extraction_with_translations(self):
+        """
+        Test Microsoft DLL version extraction using VarFileInfo translations.
+        
+        This test validates the fix for Microsoft DLLs that store version info
+        in language-specific string tables referenced by VarFileInfo\\Translation.
+        """
+        from unittest.mock import patch, MagicMock
+        from .sample_dll_data import create_sample_dll_with_version, cleanup_sample_dll
+
+        # Create a sample DLL
+        dll_path = create_sample_dll_with_version()
+
+        try:
+            # Mock the pefile parsing to simulate a Microsoft DLL with translations
+            mock_pe = MagicMock()
+            mock_pe.is_dll.return_value = True
+            mock_pe.FILE_HEADER.Machine = 0x014C  # i386
+
+            # Mock version information structure with VarFileInfo translations
+            mock_version_info = MagicMock()
+            mock_fixed_info = MagicMock()
+            mock_fixed_info.FileVersionMS = 0x000A0000  # Version 10.0.x.x  
+            mock_fixed_info.FileVersionLS = 0x4A411B4D  # Version x.x.19041.1901
+            mock_fixed_info.ProductVersionMS = 0x000A0000  # Product version 10.0.x.x
+            mock_fixed_info.ProductVersionLS = 0x4A410000  # Product version x.x.19041.0
+
+            mock_version_info.FixedFileInfo = [mock_fixed_info]
+
+            # Mock VarFileInfo with translation entries
+            mock_var_file_info = MagicMock()
+            mock_var = MagicMock()
+            
+            # Create mock translation entry for US English, Unicode (0x0409, 0x04b0)
+            mock_lang_codepage = MagicMock()
+            mock_lang_codepage.lang = 0x0409  # US English
+            mock_lang_codepage.codepage = 0x04b0  # Unicode
+            mock_var.entry = [mock_lang_codepage]
+            
+            mock_var_file_info.Var = [mock_var]
+            mock_version_info.VarFileInfo = [mock_var_file_info]
+
+            # Mock string version information in the correct translation table
+            mock_string_table = MagicMock()
+            mock_string_table.LangID = "040904b0"  # Matches our translation
+            mock_string_table.entries = {
+                b"CompanyName": b"Microsoft Corporation",
+                b"FileDescription": b"Windows NT Base API Client DLL",
+                b"FileVersion": b"10.0.19041.1901 (WinBuild.160101.0800)",
+                b"ProductName": b"Microsoft\xae Windows\xae Operating System",
+                b"ProductVersion": b"10.0.19041.1901",
+                b"LegalCopyright": b"\xa9 Microsoft Corporation. All rights reserved.",
+                b"OriginalFilename": b"KERNEL32.DLL",
+                b"InternalName": b"kernel32",
+            }
+
+            mock_string_file_info = MagicMock()
+            mock_string_file_info.StringTable = [mock_string_table]
+            mock_version_info.StringFileInfo = [mock_string_file_info]
+
+            mock_pe.VS_VERSIONINFO = [mock_version_info]
+
+            # Patch pefile.PE to return our mock
+            with patch("pefile.PE") as mock_pe_constructor:
+                mock_pe_constructor.return_value = mock_pe
+
+                # Initialize the scanner and scan the DLL
+                scanner = DLLScanner()
+                metadata = scanner.scan_file(dll_path)
+
+                # Verify that version information was extracted
+                assert metadata is not None, "Scanner should return metadata"
+
+                # Verify Microsoft-specific version information
+                assert metadata.company_name == "Microsoft Corporation"
+                assert metadata.file_version == "10.0.19041.1901 (WinBuild.160101.0800)"
+                assert metadata.product_version == "10.0.19041.1901"
+                # Use contains assertion for product name to handle encoding differences
+                assert "Microsoft" in metadata.product_name
+                assert "Windows" in metadata.product_name
+                assert "Operating System" in metadata.product_name
+                assert "Microsoft Corporation" in metadata.legal_copyright
+                assert metadata.original_filename == "KERNEL32.DLL"
+                assert metadata.internal_name == "kernel32"
+
+                print("✓ Successfully extracted Microsoft DLL version information:")
+                print(f"  Company: {metadata.company_name}")
+                print(f"  File Version: {metadata.file_version}")
+                print(f"  Product Version: {metadata.product_version}")
+                print(f"  Product Name: {metadata.product_name}")
+                print(f"  Original Filename: {metadata.original_filename}")
+                print(f"  Internal Name: {metadata.internal_name}")
+
+        finally:
+            # Clean up the temporary DLL
+            cleanup_sample_dll(dll_path)
+
     def test_end_to_end_dll_scanner_with_cyclonedx_output(self):
         """
         End-to-end test that literally installs a .dll file and runs the dll-scanner
