@@ -285,7 +285,7 @@ class DLLMetadataExtractor:
         except Exception as e:
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
 
-    def _get_version_translations(self, version_info) -> List[str]:
+    def _get_version_translations(self, version_info: Any) -> List[str]:
         """
         Extract available translations from VarFileInfo to find correct string tables.
 
@@ -318,7 +318,7 @@ class DLLMetadataExtractor:
         return translation_keys
 
     def _extract_string_version_info(
-        self, version_info, metadata: DLLMetadata, translation_key: str
+        self, version_info: Any, metadata: DLLMetadata, translation_key: str
     ) -> bool:
         """
         Extract string version information using a specific translation key.
@@ -350,7 +350,7 @@ class DLLMetadataExtractor:
         return False
 
     def _extract_string_version_info_fallback(
-        self, version_info, metadata: DLLMetadata
+        self, version_info: Any, metadata: DLLMetadata
     ) -> None:
         """
         Fallback method for extracting string version info when translation
@@ -366,7 +366,7 @@ class DLLMetadataExtractor:
             pass
 
     def _process_string_table_entries(
-        self, string_table, metadata: DLLMetadata
+        self, string_table: Any, metadata: DLLMetadata
     ) -> bool:
         """
         Process entries from a string table and populate metadata.
