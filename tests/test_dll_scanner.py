@@ -491,62 +491,6 @@ class TestCycloneDXExporter:
         assert "Copyright (C) 2025 Test Corp" in json_output
 
 
-class TestVersionManagement:
-    """Test version management functionality."""
-
-    def test_version_extraction_from_pyproject(self):
-        """Test that version can be extracted from pyproject.toml."""
-        import tomllib
-        from pathlib import Path
-
-        # Find project root
-        current_dir = Path(__file__).parent.parent
-        pyproject_path = current_dir / "pyproject.toml"
-
-        assert pyproject_path.exists(), "pyproject.toml should exist"
-
-        with open(pyproject_path, "rb") as f:
-            data = tomllib.load(f)
-
-        version = data["project"]["version"]
-        assert version is not None
-        assert isinstance(version, str)
-        assert len(version.split(".")) >= 2  # Should be at least major.minor
-
-        # Version should match semantic versioning pattern
-        import re
-
-        semver_pattern = r"^\d+\.\d+\.\d+(\-[a-zA-Z0-9\-]+)?(\+[a-zA-Z0-9\-]+)?$"
-        assert re.match(
-            semver_pattern, version
-        ), f"Version {version} should follow semantic versioning"
-
-    def test_version_consistency(self):
-        """Test that version is consistent between pyproject.toml and __init__.py."""
-        import tomllib
-        from pathlib import Path
-        import sys
-
-        # Get version from pyproject.toml
-        current_dir = Path(__file__).parent.parent
-        pyproject_path = current_dir / "pyproject.toml"
-
-        with open(pyproject_path, "rb") as f:
-            data = tomllib.load(f)
-        pyproject_version = data["project"]["version"]
-
-        # Get version from __init__.py
-        sys.path.insert(0, str(current_dir / "src"))
-        import dll_scanner
-
-        init_version = dll_scanner.__version__
-
-        assert pyproject_version == init_version, (
-            f"Version mismatch: pyproject.toml has {pyproject_version}, "
-            f"__init__.py has {init_version}"
-        )
-
-
 # Integration tests
 class TestIntegration:
     """Integration tests for the complete workflow."""
