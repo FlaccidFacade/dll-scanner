@@ -3,13 +3,9 @@ Tests for WiX integration functionality.
 """
 
 import json
-import platform
 import tempfile
-import unittest.mock as mock
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-
-import pytest
+from unittest.mock import Mock, patch
 
 from dll_scanner.wix_integration import WiXIntegration, WiXResult
 from dll_scanner.metadata import DLLMetadata
@@ -146,15 +142,6 @@ class TestWiXIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             dll_path = Path(temp_dir) / "test.dll"
             dll_path.write_text("fake dll")
-
-            wxs_content = """<?xml version="1.0" encoding="UTF-8"?>
-            <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-                <Fragment>
-                    <Component Id="test_dll" Guid="12345678-1234-1234-1234-123456789012">
-                        <File Id="test.dll" Name="test.dll" Source="$(var.SourceDir)/test.dll" KeyPath="yes" />
-                    </Component>
-                </Fragment>
-            </Wix>"""
 
             with (
                 patch.object(wix, "is_available", return_value=True),
