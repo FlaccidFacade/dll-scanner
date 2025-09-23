@@ -826,7 +826,7 @@ class TestIntegration:
     def test_microsoft_dll_version_extraction_with_translations(self):
         """
         Test Microsoft DLL version extraction using VarFileInfo translations.
-        
+
         This test validates the fix for Microsoft DLLs that store version info
         in language-specific string tables referenced by VarFileInfo\\Translation.
         """
@@ -855,13 +855,13 @@ class TestIntegration:
             # Mock VarFileInfo with translation entries
             mock_var_file_info = MagicMock()
             mock_var = MagicMock()
-            
+
             # Create mock translation entry for US English, Unicode (0x0409, 0x04b0)
             mock_lang_codepage = MagicMock()
             mock_lang_codepage.lang = 0x0409  # US English
-            mock_lang_codepage.codepage = 0x04b0  # Unicode
+            mock_lang_codepage.codepage = 0x04B0  # Unicode
             mock_var.entry = [mock_lang_codepage]
-            
+
             mock_var_file_info.Var = [mock_var]
             mock_version_info.VarFileInfo = [mock_var_file_info]
 
