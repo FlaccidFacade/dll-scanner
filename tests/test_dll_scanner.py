@@ -1267,6 +1267,126 @@ class TestIntegration:
                     "ℹ Test passed with limited functionality due to network/access issues"
                 )
 
+    def test_win32api_version_extraction(self):
+        """Test win32api version extraction functionality with mocked win32api."""
+        from dll_scanner.metadata import DLLMetadataExtractor, DLLMetadata
+        from datetime import datetime
+
+        # Create a fake DLL file for testing
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
+            tmp_file.write(b"MZ" + b"\x00" * 100)  # Minimal fake DLL
+            dll_path = Path(tmp_file.name)
+
+        try:
+            extractor = DLLMetadataExtractor()
+
+            # Mock win32api to simulate version extraction
+            with (
+                patch("dll_scanner.metadata.win32api") as mock_win32api,
+                patch("dll_scanner.metadata.win32con"),
+            ):
+
+                # Test case 1: win32api available and returns version info
+                mock_win32api.GetFileVersionInfo.side_effect = [
+                    # First call - main version info
+                    {
+                        "FileVersionMS": 0x00020001,  # Version 2.1.x.x
+                        "FileVersionLS": 0x007B0000,  # Version x.x.123.0
+                        "ProductVersionMS": 0x00020001,  # Product version 2.1.x.x
+                        "ProductVersionLS": 0x00000000,  # Product version x.x.0.0
+                    },
+                    # Second call - string file info check
+                    True,
+                    # Third call - specific language/codepage
+                    True,
+                    # Subsequent calls for string fields
+                    "2.1.0.123",  # FileVersion
+                    "2.1.0",  # ProductVersion
+                    "Test Company Inc.",  # CompanyName
+                    "Test DLL for win32api Testing",  # FileDescription
+                    "Test Product",  # ProductName
+                    "Copyright (C) 2025 Test Company Inc.",  # LegalCopyright
+                    "test.dll",  # OriginalFilename
+                    "TestInternal",  # InternalName
+                ]
+
+                # Create metadata object manually like in extract_metadata
+                stat = dll_path.stat()
+                metadata = DLLMetadata(
+                    file_path=str(dll_path),
+                    file_name=dll_path.name,
+                    file_size=stat.st_size,
+                    modification_time=datetime.fromtimestamp(stat.st_mtime),
+                )
+
+                # Test win32api extraction
+                result = extractor._extract_version_info_win32api(metadata)
+
+                # Verify results
+                assert result is True, "win32api extraction should succeed"
+                assert (
+                    metadata.file_version == "2.1.0.123"
+                ), f"Expected file version 2.1.0.123, got {metadata.file_version}"
+                assert (
+                    metadata.product_version == "2.1.0"
+                ), f"Expected product version 2.1.0, got {metadata.product_version}"
+                assert (
+                    metadata.company_name == "Test Company Inc."
+                ), f"Expected company name, got {metadata.company_name}"
+                assert metadata.file_description == "Test DLL for win32api Testing"
+                assert metadata.product_name == "Test Product"
+                assert (
+                    metadata.legal_copyright == "Copyright (C) 2025 Test Company Inc."
+                )
+                assert metadata.original_filename == "test.dll"
+                assert metadata.internal_name == "TestInternal"
+
+                print("✓ win32api version extraction test passed")
+                print(f"  File Version: {metadata.file_version}")
+                print(f"  Product Version: {metadata.product_version}")
+                print(f"  Company: {metadata.company_name}")
+                print(f"  Description: {metadata.file_description}")
+
+            # Test case 2: win32api not available
+            with patch("dll_scanner.metadata.win32api", None):
+                stat = dll_path.stat()
+                metadata_no_win32 = DLLMetadata(
+                    file_path=str(dll_path),
+                    file_name=dll_path.name,
+                    file_size=stat.st_size,
+                    modification_time=datetime.fromtimestamp(stat.st_mtime),
+                )
+                result_no_win32 = extractor._extract_version_info_win32api(
+                    metadata_no_win32
+                )
+                assert (
+                    result_no_win32 is False
+                ), "Should return False when win32api is not available"
+                print("✓ win32api unavailable test passed")
+
+            # Test case 3: win32api exception handling
+            with patch("dll_scanner.metadata.win32api") as mock_win32api_error:
+                mock_win32api_error.GetFileVersionInfo.side_effect = Exception(
+                    "win32api error"
+                )
+
+                stat = dll_path.stat()
+                metadata_error = DLLMetadata(
+                    file_path=str(dll_path),
+                    file_name=dll_path.name,
+                    file_size=stat.st_size,
+                    modification_time=datetime.fromtimestamp(stat.st_mtime),
+                )
+                result_error = extractor._extract_version_info_win32api(metadata_error)
+                assert (
+                    result_error is False
+                ), "Should return False when win32api raises exception"
+                print("✓ win32api exception handling test passed")
+
+        finally:
+            # Clean up
+            dll_path.unlink()
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

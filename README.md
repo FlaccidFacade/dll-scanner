@@ -13,6 +13,7 @@ A powerful Python tool for scanning directories to find DLL files, extracting co
 - 📊 **Comprehensive Metadata Extraction**: Extract detailed information from PE headers including:
   - Architecture and machine type
   - Version information (product, file, company) with enhanced Microsoft DLL support
+  - Native win32api integration on Windows for more reliable version extraction
   - Import/export tables
   - Security characteristics
   - Digital signature status
@@ -382,6 +383,12 @@ The static code analyzer can detect DLL dependencies in the following languages:
 - rich >= 13.0.0
 - pathlib-mate >= 1.0.0
 - cyclonedx-bom >= 4.0.0 (for CycloneDX SBOM export)
+
+### Optional Dependencies
+- **pywin32 >= 306** (Windows only) - For enhanced version extraction using native Windows APIs
+  ```bash
+  pip install dll-scanner[win32]
+  ```
 
 ### Development and Testing
 - **Cross-platform support**: Tests run on Windows, Ubuntu, and Debian
