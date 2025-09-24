@@ -13,6 +13,13 @@ try:
 except ImportError:
     pefile = None
 
+try:
+    import win32api
+    import win32con
+except ImportError:
+    win32api = None
+    win32con = None
+
 
 @dataclass
 class DLLMetadata:
@@ -222,7 +229,13 @@ class DLLMetadataExtractor:
     def _extract_version_info(self, pe: "pefile.PE", metadata: DLLMetadata) -> None:
         """Extract version information from resources."""
         try:
-            # First try the alternative FileInfo approach which may work better
+            # First try win32api if available (Windows only) as it can be more reliable
+            # for certain types of DLLs, especially system DLLs
+            if self._extract_version_info_win32api(metadata):
+                # If win32api approach succeeded, we can return early
+                return
+
+            # Then try the alternative FileInfo approach which may work better
             # for some Microsoft DLLs
             if self._extract_version_info_fileinfo(pe, metadata):
                 # If FileInfo approach succeeded, we can return early
@@ -293,6 +306,144 @@ class DLLMetadataExtractor:
         except Exception as e:
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
 
+    def _extract_version_info_win32api(self, metadata: DLLMetadata) -> bool:
+        """
+        Extract version information using win32api.GetFileVersionInfo.
+        This method can be more reliable for certain Windows DLLs,
+        especially system DLLs that might not be fully parsed by pefile.
+
+        Args:
+            metadata: DLL metadata to populate
+
+        Returns:
+            True if version information was successfully extracted, False otherwise
+        """
+        if win32api is None or win32con is None:
+            return False
+
+        try:
+            # Get version info using win32api
+            info = win32api.GetFileVersionInfo(metadata.file_path, "\\")
+            if not info:
+                return False
+
+            # Extract version numbers from the fixed info
+            ms = info.get("FileVersionMS", 0)
+            ls = info.get("FileVersionLS", 0)
+            if ms or ls:
+                file_version = f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+                if not metadata.file_version:
+                    metadata.file_version = file_version
+
+            ms = info.get("ProductVersionMS", 0)
+            ls = info.get("ProductVersionLS", 0)
+            if ms or ls:
+                product_version = f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+                if not metadata.product_version:
+                    metadata.product_version = product_version
+
+            # Extract string information
+            try:
+                # Get string file info
+                string_info = win32api.GetFileVersionInfo(
+                    metadata.file_path, "\\StringFileInfo"
+                )
+                if string_info:
+                    # Try common language/codepage combinations
+                    lang_codepage_pairs = ["040904b0", "040004b0", "040904e4"]
+
+                    for lang_codepage in lang_codepage_pairs:
+                        try:
+                            version_info = win32api.GetFileVersionInfo(
+                                metadata.file_path, f"\\StringFileInfo\\{lang_codepage}"
+                            )
+                            if version_info:
+                                # Extract version fields (string overrides binary)
+                                base = f"\\StringFileInfo\\{lang_codepage}\\"
+
+                                file_ver = win32api.GetFileVersionInfo(
+                                    metadata.file_path, base + "FileVersion"
+                                )
+                                if file_ver:
+                                    metadata.file_version = file_ver
+
+                                prod_ver = win32api.GetFileVersionInfo(
+                                    metadata.file_path, base + "ProductVersion"
+                                )
+                                if prod_ver:
+                                    metadata.product_version = prod_ver
+
+                                if not metadata.company_name:
+                                    company = win32api.GetFileVersionInfo(
+                                        metadata.file_path, base + "CompanyName"
+                                    )
+                                    if company:
+                                        metadata.company_name = company
+
+                                if not metadata.file_description:
+                                    desc = win32api.GetFileVersionInfo(
+                                        metadata.file_path, base + "FileDescription"
+                                    )
+                                    if desc:
+                                        metadata.file_description = desc
+
+                                if not metadata.product_name:
+                                    prod_name = win32api.GetFileVersionInfo(
+                                        metadata.file_path, base + "ProductName"
+                                    )
+                                    if prod_name:
+                                        metadata.product_name = prod_name
+
+                                if not metadata.legal_copyright:
+                                    copyright = win32api.GetFileVersionInfo(
+                                        metadata.file_path, base + "LegalCopyright"
+                                    )
+                                    if copyright:
+                                        metadata.legal_copyright = copyright
+
+                                if not metadata.original_filename:
+                                    orig_name = win32api.GetFileVersionInfo(
+                                        metadata.file_path, base + "OriginalFilename"
+                                    )
+                                    if orig_name:
+                                        metadata.original_filename = orig_name
+
+                                if not metadata.internal_name:
+                                    internal = win32api.GetFileVersionInfo(
+                                        metadata.file_path, base + "InternalName"
+                                    )
+                                    if internal:
+                                        metadata.internal_name = internal
+
+                                # If we extracted fields, consider it successful
+                                if (
+                                    metadata.file_version
+                                    or metadata.product_version
+                                    or metadata.company_name
+                                    or metadata.file_description
+                                ):
+                                    return True
+
+                        except Exception:
+                            # Try next language/codepage combination
+                            continue
+
+            except Exception:
+                # String info extraction failed, but we might still have version numbers
+                pass
+
+            # Return True if we extracted any version information
+            return bool(
+                metadata.file_version
+                or metadata.product_version
+                or metadata.company_name
+                or metadata.file_description
+            )
+
+        except Exception:
+            # win32api extraction failed, let other methods handle it
+            return False
+
     def _extract_version_info_fileinfo(
         self, pe: "pefile.PE", metadata: DLLMetadata
     ) -> bool:
@@ -356,7 +507,7 @@ class DLLMetadataExtractor:
                             metadata.legal_copyright = decoded_value
                             extracted = True
 
-                    # If we found version information, check if we have the essential fields
+                    # If we found version info, check if we have essential fields
                     if (
                         metadata.file_version
                         or metadata.product_version
