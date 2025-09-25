@@ -11,7 +11,11 @@ from dll_scanner import DLLScanner, DLLMetadata, DependencyAnalyzer
 from dll_scanner.scanner import ScanResult
 from dll_scanner.analyzer import DependencyMatch, AnalysisResult
 from dll_scanner.cyclonedx_exporter import CycloneDXExporter
-from dll_scanner.metadata import ExtractionMethod, DLLMetadataExtractor, extract_dll_metadata
+from dll_scanner.metadata import (
+    ExtractionMethod,
+    DLLMetadataExtractor,
+    extract_dll_metadata,
+)
 
 
 @pytest.fixture
@@ -1609,9 +1613,7 @@ class TestExtractionMethods:
     @patch("dll_scanner.metadata.pefile")
     def test_extraction_method_win32api_only(self, mock_pefile):
         """Test extraction using only win32api method."""
-        from dll_scanner.metadata import DLLMetadata
         import tempfile
-        from datetime import datetime
 
         # Create a fake DLL file
         with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
@@ -1638,7 +1640,7 @@ class TestExtractionMethods:
                     with patch.object(
                         extractor, "_extract_version_info_pefile"
                     ) as mock_pefile_method:
-                        metadata = extractor.extract_metadata(dll_path)
+                        extractor.extract_metadata(dll_path)
 
                         # win32api method should be called
                         mock_win32api.assert_called_once()
@@ -1678,7 +1680,7 @@ class TestExtractionMethods:
                     with patch.object(
                         extractor, "_extract_version_info_pefile"
                     ) as mock_pefile_method:
-                        metadata = extractor.extract_metadata(dll_path)
+                        extractor.extract_metadata(dll_path)
 
                         # pefile method should be called
                         mock_pefile_method.assert_called_once()
@@ -1719,7 +1721,7 @@ class TestExtractionMethods:
                     with patch.object(
                         extractor, "_extract_version_info_pefile"
                     ) as mock_pefile_method:
-                        metadata = extractor.extract_metadata(dll_path)
+                        extractor.extract_metadata(dll_path)
 
                         # Both specified methods should be called
                         mock_win32api.assert_called_once()
@@ -1786,7 +1788,7 @@ class TestExtractionMethods:
             scanner = DLLScanner(extraction_methods=methods)
 
             # Test scan_file method
-            result = scanner.scan_file(dll_file)
+            scanner.scan_file(dll_file)
 
             # Verify extract_dll_metadata was called with extraction methods
             mock_extract.assert_called_with(dll_file, methods)
