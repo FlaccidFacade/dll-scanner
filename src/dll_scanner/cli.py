@@ -15,10 +15,11 @@ from rich.progress import Progress
 from rich.panel import Panel
 from rich.text import Text
 
+
 from dll_scanner import __version__
 from dll_scanner.scanner import DLLScanner, ScanResult
 from dll_scanner.analyzer import DependencyAnalyzer, AnalysisResult
-from dll_scanner.metadata import DLLMetadata
+from dll_scanner.metadata import DLLMetadata, ExtractionMethod
 from dll_scanner.cyclonedx_exporter import CycloneDXExporter
 from dll_scanner.page_generator import PageGenerator
 
@@ -62,6 +63,26 @@ def setup_logging(verbose: bool) -> logging.Logger:
     logger.propagate = False
 
     return logger
+
+
+def _parse_extraction_methods(methods: tuple[str, ...]) -> set[ExtractionMethod]:
+    """Convert CLI extraction method strings to ExtractionMethod enum set."""
+    if not methods:
+        return {ExtractionMethod.ALL}
+
+    method_map = {
+        "win32api": ExtractionMethod.WIN32API,
+        "pefile": ExtractionMethod.PEFILE,
+        "fileinfo": ExtractionMethod.FILEINFO,
+        "all": ExtractionMethod.ALL,
+    }
+
+    result = set()
+    for method in methods:
+        if method.lower() in method_map:
+            result.add(method_map[method.lower()])
+
+    return result if result else {ExtractionMethod.ALL}
 
 
 @click.group()
@@ -133,6 +154,12 @@ def cli(ctx: click.Context, verbose: bool) -> None:
     is_flag=True,
     help="Enable WiX metadata extraction for enhanced Windows DLL analysis",
 )
+@click.option(
+    "--extraction-method",
+    multiple=True,
+    type=click.Choice(["win32api", "pefile", "fileinfo", "all"], case_sensitive=False),
+    help="Version extraction method(s) to use. Can specify multiple. Default: all",
+)
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -147,6 +174,7 @@ def scan(
     project_name: str,
     project_version: str,
     wix: bool,
+    extraction_method: tuple[str, ...],
 ) -> None:
     """Scan a directory for DLL files and extract metadata."""
     console: Console = ctx.obj["console"]
@@ -159,9 +187,15 @@ def scan(
         )
         sys.exit(1)
 
+    # Parse extraction methods
+    extraction_methods = _parse_extraction_methods(extraction_method)
+
     console.print(f"[bold blue]Scanning directory:[/bold blue] {directory}")
     console.print(f"[blue]Recursive:[/blue] {recursive}")
     console.print(f"[blue]Parallel processing:[/blue] {parallel}")
+    console.print(
+        f"[blue]Extraction methods:[/blue] {', '.join(m.value for m in extraction_methods)}"
+    )
     if analyze_dependencies:
         console.print(
             f"[blue]Dependency analysis:[/blue] Enabled (source: {source_dir})"
@@ -175,7 +209,10 @@ def scan(
 
     # Initialize scanner
     scanner = DLLScanner(
-        max_workers=max_workers, progress_callback=progress_callback, logger=logger
+        max_workers=max_workers,
+        progress_callback=progress_callback,
+        logger=logger,
+        extraction_methods=extraction_methods,
     )
 
     try:
@@ -355,9 +392,19 @@ def scan(
     is_flag=True,
     help="Export metadata in legacy custom JSON format instead of CycloneDX SBOM",
 )
+@click.option(
+    "--extraction-method",
+    multiple=True,
+    type=click.Choice(["win32api", "pefile", "fileinfo", "all"], case_sensitive=False),
+    help="Version extraction method(s) to use. Can specify multiple. Default: all",
+)
 @click.pass_context
 def inspect(
-    ctx: click.Context, dll_file: Path, output: Optional[Path], legacy_json: bool
+    ctx: click.Context,
+    dll_file: Path,
+    output: Optional[Path],
+    legacy_json: bool,
+    extraction_method: tuple[str, ...],
 ) -> None:
     """Inspect a single DLL file and display metadata."""
     console: Console = ctx.obj["console"]
@@ -368,7 +415,10 @@ def inspect(
         sys.exit(1)
 
     try:
-        scanner = DLLScanner(logger=logger)
+        # Parse extraction methods
+        extraction_methods = _parse_extraction_methods(extraction_method)
+
+        scanner = DLLScanner(logger=logger, extraction_methods=extraction_methods)
         metadata = scanner.scan_file(dll_file)
 
         _display_dll_metadata(console, metadata)
