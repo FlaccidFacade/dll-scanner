@@ -3,12 +3,12 @@ DLL scanner functionality for discovering DLL files in directories.
 """
 
 from pathlib import Path
-from typing import List, Iterator, Dict, Any, Optional, Callable
+from typing import List, Iterator, Dict, Any, Optional, Callable, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from dataclasses import dataclass
 
-from .metadata import DLLMetadata, extract_dll_metadata
+from .metadata import DLLMetadata, extract_dll_metadata, ExtractionMethod
 
 
 @dataclass
@@ -49,6 +49,7 @@ class DLLScanner:
         max_workers: int = 4,
         progress_callback: Optional[Callable[[str], None]] = None,
         logger: Optional[logging.Logger] = None,
+        extraction_methods: Optional[Set[ExtractionMethod]] = None,
     ):
         """
         Initialize DLL scanner.
@@ -57,10 +58,12 @@ class DLLScanner:
             max_workers: Maximum number of threads for parallel processing
             progress_callback: Optional callback function for progress updates
             logger: Optional logger for debug information
+            extraction_methods: Optional set of extraction methods to use
         """
         self.max_workers = max_workers
         self.progress_callback = progress_callback
         self.logger = logger or logging.getLogger(__name__)
+        self.extraction_methods = extraction_methods
 
     def scan_directory(
         self, directory: Path, recursive: bool = True, parallel: bool = True
@@ -166,7 +169,7 @@ class DLLScanner:
                         f"Analyzing {dll_path.name} ({i}/{len(dll_paths)})"
                     )
 
-                metadata = extract_dll_metadata(dll_path)
+                metadata = extract_dll_metadata(dll_path, self.extraction_methods)
                 metadata_list.append(metadata)
 
             except Exception as e:
@@ -194,7 +197,9 @@ class DLLScanner:
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all tasks
             future_to_path = {
-                executor.submit(extract_dll_metadata, dll_path): dll_path
+                executor.submit(
+                    extract_dll_metadata, dll_path, self.extraction_methods
+                ): dll_path
                 for dll_path in dll_paths
             }
 
@@ -237,7 +242,7 @@ class DLLScanner:
         if not dll_path.suffix.lower() == ".dll":
             raise ValueError(f"File is not a DLL: {dll_path}")
 
-        return extract_dll_metadata(dll_path)
+        return extract_dll_metadata(dll_path, self.extraction_methods)
 
     def get_summary_stats(self, scan_result: ScanResult) -> Dict[str, Any]:
         """

@@ -4,8 +4,9 @@ DLL metadata extraction functionality.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, asdict, field
+from enum import Enum
 import json
 
 try:
@@ -40,6 +41,15 @@ except ImportError:
 
     def HIWORD(x: int) -> int:
         return (x >> 16) & 0xFFFF
+
+
+class ExtractionMethod(Enum):
+    """Available version extraction methods."""
+
+    WIN32API = "win32api"
+    PEFILE = "pefile"
+    FILEINFO = "fileinfo"
+    ALL = "all"  # Use all methods in order (default behavior)
 
 
 def _extract_version_string_win32apigetVersionString(filename: str) -> str:
@@ -148,11 +158,19 @@ class DLLMetadata:
 class DLLMetadataExtractor:
     """Extracts metadata from DLL files using PE analysis."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, extraction_methods: Optional[Set[ExtractionMethod]] = None
+    ) -> None:
         if pefile is None:
             raise ImportError(
                 "pefile library is required. Install with: pip install pefile"
             )
+
+        # Set default extraction methods if none specified
+        if extraction_methods is None:
+            self.extraction_methods = {ExtractionMethod.ALL}
+        else:
+            self.extraction_methods = extraction_methods
 
     def extract_metadata(self, dll_path: Path) -> DLLMetadata:
         """
@@ -280,82 +298,90 @@ class DLLMetadataExtractor:
     def _extract_version_info(self, pe: "pefile.PE", metadata: DLLMetadata) -> None:
         """Extract version information from resources."""
         try:
-            # First try win32api if available (Windows only) as it can be more reliable
-            # for certain types of DLLs, especially system DLLs
-            if self._extract_version_info_win32api(metadata):
-                # If win32api approach succeeded, we can return early
+            # Check if user wants all methods (default behavior)
+            if ExtractionMethod.ALL in self.extraction_methods:
+                # Original behavior: try all methods in order
+                if self._extract_version_info_win32api(metadata):
+                    return
+                if self._extract_version_info_fileinfo(pe, metadata):
+                    return
+                self._extract_version_info_pefile(pe, metadata)
                 return
 
-            # Then try the alternative FileInfo approach which may work better
-            # for some Microsoft DLLs
-            if self._extract_version_info_fileinfo(pe, metadata):
-                # If FileInfo approach succeeded, we can return early
-                return
+            # Try only the specified methods
+            if ExtractionMethod.WIN32API in self.extraction_methods:
+                if self._extract_version_info_win32api(metadata):
+                    return
 
-            # Fallback to the original VS_VERSIONINFO approach
-            if hasattr(pe, "VS_VERSIONINFO"):
-                for version_info in pe.VS_VERSIONINFO:
-                    # Extract binary version information from FixedFileInfo
-                    if hasattr(version_info, "FixedFileInfo"):
-                        fixed_info = version_info.FixedFileInfo[0]
+            if ExtractionMethod.FILEINFO in self.extraction_methods:
+                if self._extract_version_info_fileinfo(pe, metadata):
+                    return
 
-                        # Extract file version from binary format
-                        # (HIWORD.LOWORD.HIWORD.LOWORD)
-                        if hasattr(fixed_info, "FileVersionMS") and hasattr(
-                            fixed_info, "FileVersionLS"
-                        ):
-                            file_ver_ms = fixed_info.FileVersionMS
-                            file_ver_ls = fixed_info.FileVersionLS
-                            if (
-                                file_ver_ms or file_ver_ls
-                            ):  # Only if version info exists
-                                file_version = (
-                                    f"{file_ver_ms >> 16}.{file_ver_ms & 0xFFFF}."
-                                    f"{file_ver_ls >> 16}.{file_ver_ls & 0xFFFF}"
-                                )
-                                # Only set if we don't already have a string version
-                                if not metadata.file_version:
-                                    metadata.file_version = file_version
-
-                        # Extract product version from binary format
-                        if hasattr(fixed_info, "ProductVersionMS") and hasattr(
-                            fixed_info, "ProductVersionLS"
-                        ):
-                            prod_ver_ms = fixed_info.ProductVersionMS
-                            prod_ver_ls = fixed_info.ProductVersionLS
-                            if (
-                                prod_ver_ms or prod_ver_ls
-                            ):  # Only if version info exists
-                                product_version = (
-                                    f"{prod_ver_ms >> 16}.{prod_ver_ms & 0xFFFF}."
-                                    f"{prod_ver_ls >> 16}.{prod_ver_ls & 0xFFFF}"
-                                )
-                                # Only set if we don't already have a string version
-                                if not metadata.product_version:
-                                    metadata.product_version = product_version
-
-                    # Extract string version information from StringFileInfo
-                    # First try to get translations from VarFileInfo to find
-                    # correct string tables
-                    translation_keys = self._get_version_translations(version_info)
-
-                    # Extract using discovered translations
-                    if translation_keys:
-                        for translation_key in translation_keys:
-                            success = self._extract_string_version_info(
-                                version_info, metadata, translation_key
-                            )
-                            if success:
-                                # Successfully extracted with this translation, break
-                                break
-                    else:
-                        # Fallback: try default method for older or non-standard DLLs
-                        self._extract_string_version_info_fallback(
-                            version_info, metadata
-                        )
+            if ExtractionMethod.PEFILE in self.extraction_methods:
+                self._extract_version_info_pefile(pe, metadata)
 
         except Exception as e:
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
+
+    def _extract_version_info_pefile(
+        self, pe: "pefile.PE", metadata: DLLMetadata
+    ) -> None:
+        """Extract version information using pefile VS_VERSIONINFO approach."""
+        # Fallback to the original VS_VERSIONINFO approach
+        if hasattr(pe, "VS_VERSIONINFO"):
+            for version_info in pe.VS_VERSIONINFO:
+                # Extract binary version information from FixedFileInfo
+                if hasattr(version_info, "FixedFileInfo"):
+                    fixed_info = version_info.FixedFileInfo[0]
+
+                    # Extract file version from binary format
+                    # (HIWORD.LOWORD.HIWORD.LOWORD)
+                    if hasattr(fixed_info, "FileVersionMS") and hasattr(
+                        fixed_info, "FileVersionLS"
+                    ):
+                        file_ver_ms = fixed_info.FileVersionMS
+                        file_ver_ls = fixed_info.FileVersionLS
+                        if file_ver_ms or file_ver_ls:  # Only if version info exists
+                            file_version = (
+                                f"{file_ver_ms >> 16}.{file_ver_ms & 0xFFFF}."
+                                f"{file_ver_ls >> 16}.{file_ver_ls & 0xFFFF}"
+                            )
+                            # Only set if we don't already have a string version
+                            if not metadata.file_version:
+                                metadata.file_version = file_version
+
+                    # Extract product version from binary format
+                    if hasattr(fixed_info, "ProductVersionMS") and hasattr(
+                        fixed_info, "ProductVersionLS"
+                    ):
+                        prod_ver_ms = fixed_info.ProductVersionMS
+                        prod_ver_ls = fixed_info.ProductVersionLS
+                        if prod_ver_ms or prod_ver_ls:  # Only if version info exists
+                            product_version = (
+                                f"{prod_ver_ms >> 16}.{prod_ver_ms & 0xFFFF}."
+                                f"{prod_ver_ls >> 16}.{prod_ver_ls & 0xFFFF}"
+                            )
+                            # Only set if we don't already have a string version
+                            if not metadata.product_version:
+                                metadata.product_version = product_version
+
+                # Extract string version information from StringFileInfo
+                # First try to get translations from VarFileInfo to find
+                # correct string tables
+                translation_keys = self._get_version_translations(version_info)
+
+                # Extract using discovered translations
+                if translation_keys:
+                    for translation_key in translation_keys:
+                        success = self._extract_string_version_info(
+                            version_info, metadata, translation_key
+                        )
+                        if success:
+                            # Successfully extracted with this translation, break
+                            break
+                else:
+                    # Fallback: try default method for older or non-standard DLLs
+                    self._extract_string_version_info_fallback(version_info, metadata)
 
     def _extract_version_info_win32api(self, metadata: DLLMetadata) -> bool:
         """
@@ -771,15 +797,18 @@ class DLLMetadataExtractor:
             )
 
 
-def extract_dll_metadata(dll_path: Path) -> DLLMetadata:
+def extract_dll_metadata(
+    dll_path: Path, extraction_methods: Optional[Set[ExtractionMethod]] = None
+) -> DLLMetadata:
     """
     Convenience function to extract metadata from a DLL file.
 
     Args:
         dll_path: Path to the DLL file
+        extraction_methods: Optional set of extraction methods to use
 
     Returns:
         DLLMetadata object containing extracted information
     """
-    extractor = DLLMetadataExtractor()
+    extractor = DLLMetadataExtractor(extraction_methods)
     return extractor.extract_metadata(dll_path)

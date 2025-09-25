@@ -18,7 +18,7 @@ from rich.text import Text
 from . import __version__
 from .scanner import DLLScanner, ScanResult
 from .analyzer import DependencyAnalyzer, AnalysisResult
-from .metadata import DLLMetadata
+from .metadata import DLLMetadata, ExtractionMethod
 from .cyclonedx_exporter import CycloneDXExporter
 from .page_generator import PageGenerator
 
@@ -32,6 +32,26 @@ def setup_logging(verbose: bool) -> logging.Logger:
         handlers=[logging.StreamHandler()],
     )
     return logging.getLogger("dll_scanner")
+
+
+def _parse_extraction_methods(methods: tuple[str, ...]) -> set[ExtractionMethod]:
+    """Convert CLI extraction method strings to ExtractionMethod enum set."""
+    if not methods:
+        return {ExtractionMethod.ALL}
+
+    method_map = {
+        "win32api": ExtractionMethod.WIN32API,
+        "pefile": ExtractionMethod.PEFILE,
+        "fileinfo": ExtractionMethod.FILEINFO,
+        "all": ExtractionMethod.ALL,
+    }
+
+    result = set()
+    for method in methods:
+        if method.lower() in method_map:
+            result.add(method_map[method.lower()])
+
+    return result if result else {ExtractionMethod.ALL}
 
 
 @click.group()
@@ -103,6 +123,12 @@ def cli(ctx: click.Context, verbose: bool) -> None:
     is_flag=True,
     help="Enable WiX metadata extraction for enhanced Windows DLL analysis",
 )
+@click.option(
+    "--extraction-method",
+    multiple=True,
+    type=click.Choice(["win32api", "pefile", "fileinfo", "all"], case_sensitive=False),
+    help="Version extraction method(s) to use. Can specify multiple. Default: all",
+)
 @click.pass_context
 def scan(
     ctx: click.Context,
@@ -117,6 +143,7 @@ def scan(
     project_name: str,
     project_version: str,
     wix: bool,
+    extraction_method: tuple[str, ...],
 ) -> None:
     """Scan a directory for DLL files and extract metadata."""
     console: Console = ctx.obj["console"]
@@ -129,9 +156,15 @@ def scan(
         )
         sys.exit(1)
 
+    # Parse extraction methods
+    extraction_methods = _parse_extraction_methods(extraction_method)
+
     console.print(f"[bold blue]Scanning directory:[/bold blue] {directory}")
     console.print(f"[blue]Recursive:[/blue] {recursive}")
     console.print(f"[blue]Parallel processing:[/blue] {parallel}")
+    console.print(
+        f"[blue]Extraction methods:[/blue] {', '.join(m.value for m in extraction_methods)}"
+    )
     if analyze_dependencies:
         console.print(
             f"[blue]Dependency analysis:[/blue] Enabled (source: {source_dir})"
@@ -145,7 +178,10 @@ def scan(
 
     # Initialize scanner
     scanner = DLLScanner(
-        max_workers=max_workers, progress_callback=progress_callback, logger=logger
+        max_workers=max_workers,
+        progress_callback=progress_callback,
+        logger=logger,
+        extraction_methods=extraction_methods,
     )
 
     try:
@@ -329,9 +365,19 @@ def scan(
     is_flag=True,
     help="Export metadata in CycloneDX SBOM format",
 )
+@click.option(
+    "--extraction-method",
+    multiple=True,
+    type=click.Choice(["win32api", "pefile", "fileinfo", "all"], case_sensitive=False),
+    help="Version extraction method(s) to use. Can specify multiple. Default: all",
+)
 @click.pass_context
 def inspect(
-    ctx: click.Context, dll_file: Path, output: Optional[Path], cyclonedx: bool
+    ctx: click.Context,
+    dll_file: Path,
+    output: Optional[Path],
+    cyclonedx: bool,
+    extraction_method: tuple[str, ...],
 ) -> None:
     """Inspect a single DLL file and display metadata."""
     console: Console = ctx.obj["console"]
@@ -342,7 +388,10 @@ def inspect(
         sys.exit(1)
 
     try:
-        scanner = DLLScanner(logger=logger)
+        # Parse extraction methods
+        extraction_methods = _parse_extraction_methods(extraction_method)
+
+        scanner = DLLScanner(logger=logger, extraction_methods=extraction_methods)
         metadata = scanner.scan_file(dll_file)
 
         _display_dll_metadata(console, metadata)
