@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import subprocess
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from dll_scanner import DLLScanner, DLLMetadata, DependencyAnalyzer
 from dll_scanner.scanner import ScanResult

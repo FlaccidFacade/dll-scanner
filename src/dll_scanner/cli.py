@@ -19,7 +19,7 @@ from rich.text import Text
 from dll_scanner import __version__
 from dll_scanner.scanner import DLLScanner, ScanResult
 from dll_scanner.analyzer import DependencyAnalyzer, AnalysisResult
-from dll_scanner.metadata import DLLMetadata
+from dll_scanner.metadata import DLLMetadata, ExtractionMethod
 from dll_scanner.cyclonedx_exporter import CycloneDXExporter
 from dll_scanner.page_generator import PageGenerator
 

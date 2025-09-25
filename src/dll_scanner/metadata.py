@@ -371,29 +371,10 @@ class DLLMetadataExtractor:
                 self._extract_version_info_pefile(pe, metadata)
                 return
 
-            # Then try PowerShell Get-Item approach (Windows only) as another reliable method
-            # especially for DLLs where win32api might not work but PowerShell can access version info
-            self.logger.debug(
-                f"Attempting PowerShell version extraction for {metadata.file_name}"
-            )
-            if self._extract_version_info_powershell(metadata):
-                self.logger.info(
-                    f"Successfully extracted version info using PowerShell for {metadata.file_name}"
-                )
-                # If PowerShell approach succeeded, we can return early
-                return
-
-            # Then try the alternative FileInfo approach which may work better
-            # for some Microsoft DLLs
-            self.logger.debug(
-                f"Attempting FileInfo version extraction for {metadata.file_name}"
-            )
-            if self._extract_version_info_fileinfo(pe, metadata):
-                self.logger.info(
-                    f"Successfully extracted version info using FileInfo for {metadata.file_name}"
-                )
-                # If FileInfo approach succeeded, we can return early
-                return
+            # Try only the specified methods
+            if ExtractionMethod.WIN32API in self.extraction_methods:
+                if self._extract_version_info_win32api(metadata):
+                    return
 
             if ExtractionMethod.FILEINFO in self.extraction_methods:
                 if self._extract_version_info_fileinfo(pe, metadata):
