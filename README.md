@@ -383,12 +383,7 @@ The static code analyzer can detect DLL dependencies in the following languages:
 - rich >= 13.0.0
 - pathlib-mate >= 1.0.0
 - cyclonedx-bom >= 4.0.0 (for CycloneDX SBOM export)
-
-### Optional Dependencies
-- **pywin32 >= 306** (Windows only) - For enhanced version extraction using native Windows APIs
-  ```bash
-  pip install dll-scanner[win32]
-  ```
+- pywin32 >= 306 (Windows only) - For enhanced version extraction using native Windows APIs
 
 ### Development and Testing
 - **Cross-platform support**: Tests run on Windows, Ubuntu, and Debian

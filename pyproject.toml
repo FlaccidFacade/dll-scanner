@@ -32,12 +32,10 @@ dependencies = [
     "pathlib-mate>=1.0.0",
     "rich>=13.0.0",
     "cyclonedx-bom>=4.0.0",
+    "pywin32>=306; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
-win32 = [
-    "pywin32>=306; sys_platform == 'win32'",
-]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
