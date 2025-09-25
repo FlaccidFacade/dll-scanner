@@ -26,12 +26,42 @@ from .page_generator import PageGenerator
 def setup_logging(verbose: bool) -> logging.Logger:
     """Set up logging configuration."""
     level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler()],
+
+    # Create or get the dll_scanner logger
+    logger = logging.getLogger("dll_scanner")
+    logger.setLevel(logging.DEBUG)  # Always set to DEBUG for file logging
+
+    # Clear any existing handlers to avoid duplicates
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # Create handlers - console and file
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+
+    # File handler for version extraction logs (always DEBUG level)
+    from pathlib import Path
+
+    log_dir = Path.home() / ".dll-scanner" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    file_handler = logging.FileHandler(log_dir / "dll_version_extraction.log")
+    file_handler.setLevel(logging.DEBUG)
+
+    # Set formatters
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    return logging.getLogger("dll_scanner")
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # Add handlers to logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    # Prevent propagation to root logger to avoid interference
+    logger.propagate = False
+
+    return logger
 
 
 @click.group()
