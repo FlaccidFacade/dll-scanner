@@ -495,6 +495,48 @@ class TestCLI:
         # Scanner should be called
         mock_scanner.scan_directory.assert_called_once()
 
+    @patch("dll_scanner.cli.DLLScanner")
+    def test_scan_command_with_legacy_json_output(
+        self, mock_scanner_class, temp_directory
+    ):
+        """Test scan command with legacy JSON output format."""
+        from dll_scanner.cli import cli
+        from click.testing import CliRunner
+        from dll_scanner.scanner import ScanResult
+
+        # Mock the scanner
+        mock_scanner = Mock()
+        mock_result = ScanResult(
+            scan_path=str(temp_directory),
+            recursive=True,
+            dll_files=[],
+            total_files_scanned=0,
+            total_dlls_found=0,
+            scan_duration_seconds=0.1,
+            errors=[],
+        )
+        mock_scanner.scan_directory.return_value = mock_result
+        mock_scanner_class.return_value = mock_scanner
+
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            result = runner.invoke(
+                cli,
+                [
+                    "scan",
+                    str(temp_directory),
+                    "--output",
+                    "results.json",
+                    "--legacy-json",
+                ],
+            )
+
+            assert result.exit_code == 0
+            assert "Scanning directory" in result.output
+            assert "Results saved to: results.json" in result.output
+            # Should NOT see CycloneDX messages with --legacy-json
+            assert "CycloneDX SBOM saved to" not in result.output
+
 
 class TestCycloneDXExporter:
     """Tests for CycloneDX SBOM export functionality."""
@@ -1085,7 +1127,6 @@ class TestIntegration:
                     "dll_scanner.cli",
                     "scan",
                     str(test_dir_path),
-                    "--cyclonedx",
                     "--output",
                     str(cyclonedx_output_path),
                     "--project-name",
@@ -1299,7 +1340,6 @@ class TestIntegration:
                             "dll_scanner.cli",
                             "scan",
                             str(test_dir_path),
-                            "--cyclonedx",
                             "--output",
                             str(cyclonedx_output_path),
                             "--project-name",
@@ -1393,7 +1433,6 @@ class TestIntegration:
                         "dll_scanner.cli",
                         "scan",
                         str(test_dir_path),
-                        "--cyclonedx",
                         "--output",
                         str(cyclonedx_output_path),
                     ]

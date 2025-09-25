@@ -84,7 +84,7 @@ def cli(ctx: click.Context, verbose: bool) -> None:
     "--output",
     "-o",
     type=click.Path(path_type=Path),
-    help="Output file for scan results (JSON format)",
+    help="Output file for scan results (CycloneDX SBOM format by default)",
 )
 @click.option(
     "--max-workers",
@@ -104,9 +104,9 @@ def cli(ctx: click.Context, verbose: bool) -> None:
     help="Source directory for dependency analysis (required with -a)",
 )
 @click.option(
-    "--cyclonedx",
+    "--legacy-json",
     is_flag=True,
-    help="Export results in CycloneDX SBOM format",
+    help="Export results in legacy custom JSON format instead of CycloneDX SBOM",
 )
 @click.option(
     "--project-name",
@@ -139,7 +139,7 @@ def scan(
     max_workers: int,
     analyze_dependencies: bool,
     source_dir: Optional[Path],
-    cyclonedx: bool,
+    legacy_json: bool,
     project_name: str,
     project_version: str,
     wix: bool,
@@ -265,11 +265,23 @@ def scan(
 
         # Save results to file if requested
         if output:
-            if cyclonedx:
-                # Export in CycloneDX SBOM format
+            if legacy_json:
+                # Export in custom JSON format
+                result_data = scan_result.to_dict()
+                if analysis_results:
+                    dependency_report = analyzer.generate_dependency_report(
+                        analysis_results
+                    )
+                    result_data["dependency_analysis"] = dependency_report
+
+                with open(output, "w") as f:
+                    json.dump(result_data, f, indent=2)
+                console.print(f"\n[green]Results saved to:[/green] {output}")
+            else:
+                # Export in CycloneDX SBOM format (default)
                 try:
                     cyclonedx_exporter = CycloneDXExporter()
-                    cyclonedx_json = cyclonedx_exporter.export_to_json(
+                    cyclonedx_exporter.export_to_json(
                         scan_result,
                         analysis_results,
                         project_name,
@@ -298,22 +310,6 @@ def scan(
                         f"[red]Error exporting CycloneDX SBOM:[/red] {str(e)}"
                     )
                     logger.error(f"CycloneDX export failed: {str(e)}")
-            else:
-                # Export in custom JSON format
-                result_data = scan_result.to_dict()
-                if analysis_results:
-                    dependency_report = analyzer.generate_dependency_report(
-                        analysis_results
-                    )
-                    result_data["dependency_analysis"] = dependency_report
-
-                with open(output, "w") as f:
-                    json.dump(result_data, f, indent=2)
-                console.print(f"\n[green]Results saved to:[/green] {output}")
-        elif cyclonedx:
-            console.print(
-                "[yellow]Warning:[/yellow] --cyclonedx flag requires --output to be specified"
-            )
 
         # Display WiX-specific information if used
         if wix:
@@ -358,12 +354,12 @@ def scan(
     "--output",
     "-o",
     type=click.Path(path_type=Path),
-    help="Output file for metadata (JSON format)",
+    help="Output file for metadata (CycloneDX SBOM format by default)",
 )
 @click.option(
-    "--cyclonedx",
+    "--legacy-json",
     is_flag=True,
-    help="Export metadata in CycloneDX SBOM format",
+    help="Export metadata in legacy custom JSON format instead of CycloneDX SBOM",
 )
 @click.option(
     "--extraction-method",
@@ -373,11 +369,7 @@ def scan(
 )
 @click.pass_context
 def inspect(
-    ctx: click.Context,
-    dll_file: Path,
-    output: Optional[Path],
-    cyclonedx: bool,
-    extraction_method: tuple[str, ...],
+    ctx: click.Context, dll_file: Path, output: Optional[Path], legacy_json: bool
 ) -> None:
     """Inspect a single DLL file and display metadata."""
     console: Console = ctx.obj["console"]
@@ -397,8 +389,12 @@ def inspect(
         _display_dll_metadata(console, metadata)
 
         if output:
-            if cyclonedx:
-                # Create a single-file scan result for CycloneDX export
+            if legacy_json:
+                with open(output, "w") as f:
+                    f.write(metadata.to_json())
+                console.print(f"\n[green]Metadata saved to:[/green] {output}")
+            else:
+                # Create a single-file scan result for CycloneDX export (default)
                 from .scanner import ScanResult
 
                 scan_result = ScanResult(
@@ -413,7 +409,7 @@ def inspect(
 
                 try:
                     cyclonedx_exporter = CycloneDXExporter()
-                    cyclonedx_json = cyclonedx_exporter.export_to_json(
+                    cyclonedx_exporter.export_to_json(
                         scan_result,
                         None,  # No dependency analysis for single file
                         dll_file.stem,  # Use filename as project name
@@ -432,14 +428,6 @@ def inspect(
                         f"[red]Error exporting CycloneDX SBOM:[/red] {str(e)}"
                     )
                     logger.error(f"CycloneDX export failed: {str(e)}")
-            else:
-                with open(output, "w") as f:
-                    f.write(metadata.to_json())
-                console.print(f"\n[green]Metadata saved to:[/green] {output}")
-        elif cyclonedx:
-            console.print(
-                "[yellow]Warning:[/yellow] --cyclonedx flag requires --output to be specified"
-            )
 
     except Exception as e:
         console.print(f"[red]Error inspecting DLL:[/red] {str(e)}")
@@ -459,7 +447,12 @@ def inspect(
     "--output",
     "-o",
     type=click.Path(path_type=Path),
-    help="Output file for analysis results (JSON format)",
+    help="Output file for analysis results (CycloneDX SBOM format by default)",
+)
+@click.option(
+    "--legacy-json",
+    is_flag=True,
+    help="Export analysis results in legacy custom JSON format instead of CycloneDX SBOM",
 )
 @click.pass_context
 def analyze(
@@ -467,6 +460,7 @@ def analyze(
     source_directory: Path,
     dll_files: tuple[Path, ...],
     output: Optional[Path],
+    legacy_json: bool,
 ) -> None:
     """Analyze source code to confirm DLL dependencies."""
     console: Console = ctx.obj["console"]
@@ -517,10 +511,63 @@ def analyze(
 
         # Save results if requested
         if output:
-            dependency_report = analyzer.generate_dependency_report(analysis_results)
-            with open(output, "w") as f:
-                json.dump(dependency_report, f, indent=2)
-            console.print(f"\n[green]Analysis results saved to:[/green] {output}")
+            if legacy_json:
+                dependency_report = analyzer.generate_dependency_report(
+                    analysis_results
+                )
+                with open(output, "w") as f:
+                    json.dump(dependency_report, f, indent=2)
+                console.print(f"\n[green]Analysis results saved to:[/green] {output}")
+            else:
+                # Export in CycloneDX SBOM format (default)
+                # Create a scan result for the analyzed DLL files
+                dll_metadatas = [result.dll_metadata for result in analysis_results]
+                from .scanner import ScanResult
+
+                scan_result = ScanResult(
+                    scan_path=str(source_directory),
+                    recursive=True,
+                    dll_files=dll_metadatas,
+                    total_files_scanned=len(dll_metadatas),
+                    total_dlls_found=len(dll_metadatas),
+                    scan_duration_seconds=0.0,
+                    errors=[],
+                )
+
+                try:
+                    cyclonedx_exporter = CycloneDXExporter()
+                    cyclonedx_exporter.export_to_json(
+                        scan_result,
+                        analysis_results,  # Include dependency analysis
+                        f"Dependency Analysis - {source_directory.name}",
+                        "1.0.0",
+                        output,
+                    )
+                    console.print(f"\n[green]CycloneDX SBOM saved to:[/green] {output}")
+
+                    # Display summary
+                    bom = cyclonedx_exporter.export_to_cyclonedx(
+                        scan_result,
+                        analysis_results,
+                        f"Dependency Analysis - {source_directory.name}",
+                        "1.0.0",
+                    )
+                    summary = cyclonedx_exporter.get_component_summary(bom)
+                    console.print(
+                        f"[blue]SBOM contains {summary['total_components']} components[/blue]"
+                    )
+
+                except ImportError as e:
+                    console.print(f"[red]Error:[/red] {str(e)}")
+                    console.print(
+                        "[yellow]Install CycloneDX support with:[/yellow] pip install cyclonedx-bom"
+                    )
+                    sys.exit(1)
+                except Exception as e:
+                    console.print(
+                        f"[red]Error exporting CycloneDX SBOM:[/red] {str(e)}"
+                    )
+                    logger.error(f"CycloneDX export failed: {str(e)}")
 
     except Exception as e:
         console.print(f"[red]Error during analysis:[/red] {str(e)}")
