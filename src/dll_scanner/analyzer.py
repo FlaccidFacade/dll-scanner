@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import logging
 
-from .metadata import DLLMetadata
+from dll_scanner.metadata import DLLMetadata
 
 
 @dataclass

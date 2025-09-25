@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 # Import package version
-from . import __version__
+from dll_scanner import __version__
 
 if TYPE_CHECKING:
     from cyclonedx.model.bom import Bom, Tool
@@ -88,9 +88,9 @@ except ImportError:
         pass
 
 
-from .metadata import DLLMetadata
-from .scanner import ScanResult
-from .analyzer import AnalysisResult
+from dll_scanner.metadata import DLLMetadata
+from dll_scanner.scanner import ScanResult
+from dll_scanner.analyzer import AnalysisResult
 
 
 class CycloneDXExporter:
