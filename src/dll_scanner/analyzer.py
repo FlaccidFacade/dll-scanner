@@ -102,6 +102,20 @@ class DependencyAnalyzer:
             r"ctypes\.(?:windll|cdll|oledll)\.([^.\s]+)", re.IGNORECASE
         )
 
+        # Enhanced ctypes patterns for direct library loading
+        self.python_ctypes_direct_pattern = re.compile(
+            r"ctypes\.(?:CDLL|WinDLL|OleDLL)\s*\(\s*[\"']"
+            r"([^\"']+(?:\.dll|\.so|\.dylib)?)[\"']",
+            re.IGNORECASE,
+        )
+
+        # ctypes LoadLibrary pattern via cdll
+        self.python_ctypes_loadlibrary_pattern = re.compile(
+            r"ctypes\.(?:windll|cdll|oledll)\.LoadLibrary\s*\(\s*[\"']"
+            r"([^\"']+\.dll)[\"']",
+            re.IGNORECASE,
+        )
+
         self.python_loadlibrary_pattern = re.compile(
             r'LoadLibrary\s*\(\s*["\']([^"\']+\.dll)["\']', re.IGNORECASE
         )
@@ -282,6 +296,39 @@ class DependencyAnalyzer:
                         match_type="python_ctypes",
                         dll_name=referenced_dll,
                         confidence=0.9,
+                    )
+                )
+
+        # Enhanced ctypes direct loading patterns (CDLL, WinDLL, etc.)
+        for match in self.python_ctypes_direct_pattern.finditer(line):
+            referenced_dll = match.group(1)
+            # Ensure we have a .dll extension for Windows compatibility
+            if not referenced_dll.endswith((".dll", ".so", ".dylib")):
+                referenced_dll += ".dll"
+            if self._dll_names_match(referenced_dll, dll_name):
+                matches.append(
+                    DependencyMatch(
+                        file_path=str(source_file),
+                        line_number=line_num,
+                        line_content=line.strip(),
+                        match_type="python_ctypes_direct",
+                        dll_name=referenced_dll,
+                        confidence=0.95,  # High confidence for explicit loading
+                    )
+                )
+
+        # ctypes LoadLibrary patterns
+        for match in self.python_ctypes_loadlibrary_pattern.finditer(line):
+            referenced_dll = match.group(1)
+            if self._dll_names_match(referenced_dll, dll_name):
+                matches.append(
+                    DependencyMatch(
+                        file_path=str(source_file),
+                        line_number=line_num,
+                        line_content=line.strip(),
+                        match_type="python_ctypes_loadlibrary",
+                        dll_name=referenced_dll,
+                        confidence=0.95,
                     )
                 )
 
