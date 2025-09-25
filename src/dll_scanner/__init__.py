@@ -8,7 +8,7 @@ This package provides functionality to:
 - Generate comprehensive reports
 """
 
-__version__ = "0.6.3"
+__version__ = "0.6.4"
 __author__ = "DLL Scanner Contributors"
 
 from dll_scanner.scanner import DLLScanner
