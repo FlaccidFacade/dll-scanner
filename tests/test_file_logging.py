@@ -5,6 +5,7 @@ Test file logging functionality for version extraction.
 import logging
 import tempfile
 from pathlib import Path
+from typing import Tuple
 from unittest.mock import MagicMock, patch
 
 from dll_scanner.cli import setup_logging
@@ -12,14 +13,14 @@ from dll_scanner.metadata import DLLMetadataExtractor
 from dll_scanner.scanner import DLLScanner
 
 
-def _get_log_file_path():
+def _get_log_file_path() -> Tuple[Path, Path]:
     """Helper function to get the log directory and file path."""
     log_dir = Path.home() / ".dll-scanner" / "logs"
     log_file = log_dir / "dll_version_extraction.log"
     return log_dir, log_file
 
 
-def _cleanup_log_file():
+def _cleanup_log_file() -> None:
     """Helper function to clean up the log file if it exists."""
     log_dir, log_file = _get_log_file_path()
     if log_file.exists():
