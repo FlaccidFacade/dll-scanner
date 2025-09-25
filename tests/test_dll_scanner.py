@@ -393,7 +393,7 @@ import ctypes
 
 # Multiple ways to load the same library
 lib1 = ctypes.CDLL("sample.dll")
-lib2 = ctypes.WinDLL("sample.dll")  
+lib2 = ctypes.WinDLL("sample.dll")
 lib3 = ctypes.windll.LoadLibrary("sample.dll")
 result = ctypes.cdll.sample.function()
         """
@@ -1529,6 +1529,55 @@ class TestIntegration:
                     result_error is False
                 ), "Should return False when win32api raises exception"
                 print("✓ win32api exception handling test passed")
+
+        finally:
+            # Clean up
+            dll_path.unlink()
+
+    def test_extract_version_string_win32apigetVersionString(self):
+        """Test the new _extract_version_string_win32apigetVersionString function."""
+        from dll_scanner.metadata import (
+            _extract_version_string_win32apigetVersionString,
+        )
+
+        # Create a fake DLL file for testing
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
+            tmp_file.write(b"MZ" + b"\x00" * 100)  # Minimal fake DLL
+            dll_path = Path(tmp_file.name)
+
+        try:
+            # Test case 1: Successful version extraction
+            with patch("dll_scanner.metadata.GetFileVersionInfo") as mock_get_version:
+                mock_get_version.return_value = {
+                    "FileVersionMS": 0x00020001,  # Version 2.1.x.x
+                    "FileVersionLS": 0x007B0000,  # Version x.x.123.0
+                }
+
+                result = _extract_version_string_win32apigetVersionString(str(dll_path))
+
+                # Expected: HIWORD(0x00020001)=2, LOWORD(0x00020001)=1,
+                # HIWORD(0x007B0000)=123, LOWORD(0x007B0000)=0
+                expected = "2.1.123.0"
+                assert result == expected, f"Expected {expected}, got {result}"
+                print(f"✓ Version extraction success test passed: {result}")
+
+            # Test case 2: Exception handling
+            with patch(
+                "dll_scanner.metadata.GetFileVersionInfo"
+            ) as mock_get_version_error:
+                mock_get_version_error.side_effect = Exception("Test error")
+
+                result = _extract_version_string_win32apigetVersionString(str(dll_path))
+                assert result == "---", f"Expected '---' on error, got {result}"
+                print("✓ Version extraction error handling test passed")
+
+            # Test case 3: GetFileVersionInfo not available
+            with patch("dll_scanner.metadata.GetFileVersionInfo", None):
+                result = _extract_version_string_win32apigetVersionString(str(dll_path))
+                assert (
+                    result == "---"
+                ), f"Expected '---' when GetFileVersionInfo is None, got {result}"
+                print("✓ Version extraction unavailable function test passed")
 
         finally:
             # Clean up
