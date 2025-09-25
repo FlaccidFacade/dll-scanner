@@ -158,15 +158,19 @@ class DLLMetadata:
 
 class DLLMetadataExtractor:
     """Extracts metadata from DLL files using PE analysis."""
-    def __init__(self, logger: Optional["logging.Logger"] = None) -> None:
+    def __init__(
+        self,
+        extraction_methods: Optional[Set[ExtractionMethod]] = None,
+        logger: Optional["logging.Logger"] = None,
+    ) -> None:
         if pefile is None:
             raise ImportError(
                 "pefile library is required. Install with: pip install pefile"
             )
+        
         import logging
-
         self.logger = logger or logging.getLogger(__name__)
-
+        
         # Set default extraction methods if none specified
         if extraction_methods is None:
             self.extraction_methods = {ExtractionMethod.ALL}
@@ -298,116 +302,30 @@ class DLLMetadataExtractor:
 
     def _extract_version_info(self, pe: "pefile.PE", metadata: DLLMetadata) -> None:
         """Extract version information from resources."""
-        self.logger.debug(f"Starting version info extraction for {metadata.file_name}")
         try:
-            # First try win32api if available (Windows only) as it can be more reliable
-            # for certain types of DLLs, especially system DLLs
-            self.logger.debug(
-                f"Attempting win32api version extraction for {metadata.file_name}"
-            )
-            if self._extract_version_info_win32api(metadata):
-                self.logger.info(
-                    f"Successfully extracted version info using win32api for {metadata.file_name}"
-                )
-                # If win32api approach succeeded, we can return early
+            # Check if user wants all methods (default behavior)
+            if ExtractionMethod.ALL in self.extraction_methods:
+                # Original behavior: try all methods in order
+                if self._extract_version_info_win32api(metadata):
+                    return
+                if self._extract_version_info_fileinfo(pe, metadata):
+                    return
+                self._extract_version_info_pefile(pe, metadata)
                 return
 
-            # Then try the alternative FileInfo approach which may work better
-            # for some Microsoft DLLs
-            self.logger.debug(
-                f"Attempting FileInfo version extraction for {metadata.file_name}"
-            )
-            if self._extract_version_info_fileinfo(pe, metadata):
-                self.logger.info(
-                    f"Successfully extracted version info using FileInfo for {metadata.file_name}"
-                )
-                # If FileInfo approach succeeded, we can return early
-                return
+            # Try only the specified methods
+            if ExtractionMethod.WIN32API in self.extraction_methods:
+                if self._extract_version_info_win32api(metadata):
+                    return
 
-            # Fallback to the original VS_VERSIONINFO approach
-            self.logger.debug(
-                f"Attempting VS_VERSIONINFO version extraction for {metadata.file_name}"
-            )
-            if hasattr(pe, "VS_VERSIONINFO"):
-                for version_info in pe.VS_VERSIONINFO:
-                    # Extract binary version information from FixedFileInfo
-                    if hasattr(version_info, "FixedFileInfo"):
-                        fixed_info = version_info.FixedFileInfo[0]
+            if ExtractionMethod.FILEINFO in self.extraction_methods:
+                if self._extract_version_info_fileinfo(pe, metadata):
+                    return
 
-                        # Extract file version from binary format
-                        # (HIWORD.LOWORD.HIWORD.LOWORD)
-                        if hasattr(fixed_info, "FileVersionMS") and hasattr(
-                            fixed_info, "FileVersionLS"
-                        ):
-                            file_ver_ms = fixed_info.FileVersionMS
-                            file_ver_ls = fixed_info.FileVersionLS
-                            if (
-                                file_ver_ms or file_ver_ls
-                            ):  # Only if version info exists
-                                file_version = (
-                                    f"{file_ver_ms >> 16}.{file_ver_ms & 0xFFFF}."
-                                    f"{file_ver_ls >> 16}.{file_ver_ls & 0xFFFF}"
-                                )
-                                # Only set if we don't already have a string version
-                                if not metadata.file_version:
-                                    metadata.file_version = file_version
-
-                        # Extract product version from binary format
-                        if hasattr(fixed_info, "ProductVersionMS") and hasattr(
-                            fixed_info, "ProductVersionLS"
-                        ):
-                            prod_ver_ms = fixed_info.ProductVersionMS
-                            prod_ver_ls = fixed_info.ProductVersionLS
-                            if (
-                                prod_ver_ms or prod_ver_ls
-                            ):  # Only if version info exists
-                                product_version = (
-                                    f"{prod_ver_ms >> 16}.{prod_ver_ms & 0xFFFF}."
-                                    f"{prod_ver_ls >> 16}.{prod_ver_ls & 0xFFFF}"
-                                )
-                                # Only set if we don't already have a string version
-                                if not metadata.product_version:
-                                    metadata.product_version = product_version
-
-                    # Extract string version information from StringFileInfo
-                    # First try to get translations from VarFileInfo to find
-                    # correct string tables
-                    translation_keys = self._get_version_translations(version_info)
-
-                    # Extract using discovered translations
-                    if translation_keys:
-                        for translation_key in translation_keys:
-                            success = self._extract_string_version_info(
-                                version_info, metadata, translation_key
-                            )
-                            if success:
-                                # Successfully extracted with this translation, break
-                                break
-                    else:
-                        # Fallback: try default method for older or non-standard DLLs
-                        self.logger.debug(
-                            f"Using fallback string version extraction for {metadata.file_name}"
-                        )
-                        self._extract_string_version_info_fallback(
-                            version_info, metadata
-                        )
-            else:
-                self.logger.debug(f"No VS_VERSIONINFO found in {metadata.file_name}")
-
-            # Log final version extraction results
-            if metadata.file_version or metadata.product_version:
-                self.logger.info(
-                    f"Version info extracted for {metadata.file_name}: FileVersion='{metadata.file_version}', ProductVersion='{metadata.product_version}'"
-                )
-            else:
-                self.logger.warning(
-                    f"No version information could be extracted for {metadata.file_name}"
-                )
+            if ExtractionMethod.PEFILE in self.extraction_methods:
+                self._extract_version_info_pefile(pe, metadata)
 
         except Exception as e:
-            self.logger.error(
-                f"Version info extraction failed for {metadata.file_name}: {str(e)}"
-            )
             metadata.analysis_errors.append(f"Version info extraction failed: {str(e)}")
 
     def _extract_version_info_pefile(
@@ -919,17 +837,17 @@ class DLLMetadataExtractor:
 
 
 def extract_dll_metadata(
-    dll_path: Path, logger: Optional[logging.Logger] = None
+    dll_path: Path, extraction_methods: Optional[Set[ExtractionMethod]] = None
 ) -> DLLMetadata:
     """
     Convenience function to extract metadata from a DLL file.
 
     Args:
         dll_path: Path to the DLL file
-        logger: Optional logger for debug information
+        extraction_methods: Optional set of extraction methods to use
 
     Returns:
         DLLMetadata object containing extracted information
     """
-    extractor = DLLMetadataExtractor(logger=logger)
+    extractor = DLLMetadataExtractor(extraction_methods)
     return extractor.extract_metadata(dll_path)

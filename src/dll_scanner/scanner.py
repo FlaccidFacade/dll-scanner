@@ -170,7 +170,7 @@ class DLLScanner:
                     )
 
 
-                metadata = extract_dll_metadata(dll_path, self.logger)
+                metadata = extract_dll_metadata(dll_path, self.extraction_methods)
                 metadata_list.append(metadata)
 
             except Exception as e:
@@ -180,9 +180,9 @@ class DLLScanner:
 
         return metadata_list, errors
 
-    def _extract_metadata_with_logger(self, dll_path: Path) -> DLLMetadata:
-        """Helper function to extract metadata with logger for parallel processing."""
-        return extract_dll_metadata(dll_path, self.logger)
+    def _extract_metadata_with_extraction_methods(self, dll_path: Path) -> DLLMetadata:
+        """Helper function to extract metadata with extraction methods for parallel processing."""
+        return extract_dll_metadata(dll_path, self.extraction_methods)
 
     def _extract_metadata_parallel(
         self, dll_paths: List[Path]
@@ -202,7 +202,7 @@ class DLLScanner:
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all tasks
             future_to_path = {
-                executor.submit(self._extract_metadata_with_logger, dll_path): dll_path
+                executor.submit(self._extract_metadata_with_extraction_methods, dll_path): dll_path
                 for dll_path in dll_paths
             }
 
@@ -245,7 +245,7 @@ class DLLScanner:
         if not dll_path.suffix.lower() == ".dll":
             raise ValueError(f"File is not a DLL: {dll_path}")
             
-        return extract_dll_metadata(dll_path, self.logger)
+        return extract_dll_metadata(dll_path, self.extraction_methods)
 
     def get_summary_stats(self, scan_result: ScanResult) -> Dict[str, Any]:
         """
