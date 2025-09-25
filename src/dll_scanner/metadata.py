@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict, field
 import json
 import logging
+import platform
+import subprocess
 
 try:
     import pefile
@@ -71,6 +73,57 @@ def _extract_version_string_win32apigetVersionString(filename: str) -> str:
     versionStr = ".".join([str(i) for i in versionAsList])
 
     return versionStr
+
+
+def _extract_version_string_powershell(filename: str) -> str:
+    """
+    Extract version string using PowerShell's Get-Item command.
+
+    This method uses PowerShell to execute:
+    Get-Item "path" | Select-Object -ExpandProperty VersionInfo | Select-Object FileVersion
+
+    Args:
+        filename: Path to the DLL file
+
+    Returns:
+        str: Version string (e.g., "1.1.1q") or "---" if failed or not on Windows
+    """
+    # Only attempt on Windows platform
+    if platform.system() != "Windows":
+        return "---"
+
+    try:
+        # PowerShell command to get file version info
+        # Using -ExpandProperty to get the VersionInfo object, then select FileVersion
+        powershell_cmd = [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            f'(Get-Item "{filename}").VersionInfo.FileVersion',
+        ]
+
+        # Execute PowerShell command with timeout
+        result = subprocess.run(
+            powershell_cmd,
+            capture_output=True,
+            text=True,
+            timeout=10,  # 10 second timeout
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            version = result.stdout.strip()
+            # Filter out empty lines and whitespace
+            if version and version.lower() not in ["", "null", "$null"]:
+                return version
+
+        return "---"
+
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError, Exception):
+        # Any subprocess error, timeout, or other exception
+        return "---"
 
 
 @dataclass
@@ -295,6 +348,18 @@ class DLLMetadataExtractor:
                     f"Successfully extracted version info using win32api for {metadata.file_name}"
                 )
                 # If win32api approach succeeded, we can return early
+                return
+
+            # Then try PowerShell Get-Item approach (Windows only) as another reliable method
+            # especially for DLLs where win32api might not work but PowerShell can access version info
+            self.logger.debug(
+                f"Attempting PowerShell version extraction for {metadata.file_name}"
+            )
+            if self._extract_version_info_powershell(metadata):
+                self.logger.info(
+                    f"Successfully extracted version info using PowerShell for {metadata.file_name}"
+                )
+                # If PowerShell approach succeeded, we can return early
                 return
 
             # Then try the alternative FileInfo approach which may work better
@@ -557,6 +622,171 @@ class DLLMetadataExtractor:
             # win32api extraction failed, let other methods handle it
             self.logger.debug(
                 f"win32api extraction failed for {metadata.file_name}: {str(e)}"
+            )
+            return False
+
+    def _extract_version_info_powershell(self, metadata: DLLMetadata) -> bool:
+        """
+        Extract version information using PowerShell Get-Item command.
+        This method uses PowerShell to access Windows file version information
+        which can be more reliable for certain DLLs than pefile parsing.
+
+        Args:
+            metadata: DLL metadata to populate
+
+        Returns:
+            True if version information was successfully extracted, False otherwise
+        """
+        # Only attempt on Windows
+        if platform.system() != "Windows":
+            self.logger.debug(
+                f"PowerShell extraction skipped for {metadata.file_name} - not on Windows"
+            )
+            return False
+
+        try:
+            self.logger.debug(
+                f"Attempting PowerShell version extraction for {metadata.file_name}"
+            )
+
+            # Try to extract version string using PowerShell
+            version_string = _extract_version_string_powershell(metadata.file_path)
+
+            if version_string != "---" and version_string.strip():
+                # If we don't already have file_version, use the PowerShell result
+                if not metadata.file_version:
+                    metadata.file_version = version_string.strip()
+
+                # Try to extract additional version information using more detailed PowerShell commands
+                try:
+                    # Get more detailed version information
+                    detailed_cmd = [
+                        "powershell.exe",
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-Command",
+                        f'$v = (Get-Item "{metadata.file_path}").VersionInfo; '
+                        f'"FileVersion: $($v.FileVersion)"'
+                        f'; "ProductVersion: $($v.ProductVersion)"'
+                        f'; "CompanyName: $($v.CompanyName)"'
+                        f'; "FileDescription: $($v.FileDescription)"'
+                        f'; "ProductName: $($v.ProductName)"'
+                        f'; "LegalCopyright: $($v.LegalCopyright)"'
+                        f'; "InternalName: $($v.InternalName)"'
+                        f'; "OriginalFilename: $($v.OriginalFilename)"',
+                    ]
+
+                    result = subprocess.run(
+                        detailed_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=15,  # 15 second timeout
+                        encoding="utf-8",
+                        errors="replace",
+                    )
+
+                    if result.returncode == 0 and result.stdout.strip():
+                        lines = result.stdout.strip().split("\n")
+                        for line in lines:
+                            line = line.strip()
+                            if (
+                                line.startswith("FileVersion: ")
+                                and not metadata.file_version
+                            ):
+                                val = line[13:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.file_version = val
+
+                            elif (
+                                line.startswith("ProductVersion: ")
+                                and not metadata.product_version
+                            ):
+                                val = line[16:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.product_version = val
+
+                            elif (
+                                line.startswith("CompanyName: ")
+                                and not metadata.company_name
+                            ):
+                                val = line[13:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.company_name = val
+
+                            elif (
+                                line.startswith("FileDescription: ")
+                                and not metadata.file_description
+                            ):
+                                val = line[17:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.file_description = val
+
+                            elif (
+                                line.startswith("ProductName: ")
+                                and not metadata.product_name
+                            ):
+                                val = line[13:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.product_name = val
+
+                            elif (
+                                line.startswith("LegalCopyright: ")
+                                and not metadata.legal_copyright
+                            ):
+                                val = line[16:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.legal_copyright = val
+
+                            elif (
+                                line.startswith("InternalName: ")
+                                and not metadata.internal_name
+                            ):
+                                val = line[14:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.internal_name = val
+
+                            elif (
+                                line.startswith("OriginalFilename: ")
+                                and not metadata.original_filename
+                            ):
+                                val = line[18:].strip()
+                                if val and val.lower() not in ["", "null", "$null"]:
+                                    metadata.original_filename = val
+
+                except (
+                    subprocess.TimeoutExpired,
+                    subprocess.SubprocessError,
+                    OSError,
+                    Exception,
+                ) as e:
+                    # If detailed extraction fails, we still have the basic version
+                    self.logger.debug(
+                        f"PowerShell detailed extraction failed for {metadata.file_name}: {str(e)}"
+                    )
+
+                # Return True if we extracted any version information
+                result = bool(
+                    metadata.file_version
+                    or metadata.product_version
+                    or metadata.company_name
+                    or metadata.file_description
+                )
+
+                if result:
+                    self.logger.debug(
+                        f"PowerShell extraction succeeded for {metadata.file_name}"
+                    )
+                    return True
+
+            self.logger.debug(
+                f"PowerShell extraction found no version info for {metadata.file_name}"
+            )
+            return False
+
+        except Exception as e:
+            # PowerShell extraction failed, let other methods handle it
+            self.logger.debug(
+                f"PowerShell extraction failed for {metadata.file_name}: {str(e)}"
             )
             return False
 
