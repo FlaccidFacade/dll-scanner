@@ -16,9 +16,60 @@ except ImportError:
 try:
     import win32api
     import win32con
+
+    # Try to import LOWORD and HIWORD directly from win32api
+    try:
+        from win32api import GetFileVersionInfo, LOWORD, HIWORD
+    except ImportError:
+        # If not available, define them as helper functions
+        GetFileVersionInfo = getattr(win32api, "GetFileVersionInfo", None)
+
+        def LOWORD(x: int) -> int:
+            return x & 0xFFFF
+
+        def HIWORD(x: int) -> int:
+            return (x >> 16) & 0xFFFF
+
 except ImportError:
     win32api = None
     win32con = None
+    GetFileVersionInfo = None
+
+    def LOWORD(x: int) -> int:
+        return x & 0xFFFF
+
+    def HIWORD(x: int) -> int:
+        return (x >> 16) & 0xFFFF
+
+
+def _extract_version_string_win32apigetVersionString(filename: str) -> str:
+    """
+    Extract version string using win32api GetFileVersionInfo with HIWORD/LOWORD helpers.
+
+    Args:
+        filename: Path to the DLL file
+
+    Returns:
+        str: Version string in format "major.minor.build.revision" or "---" if failed
+    """
+    # requirement: "$ pip install pywin32"
+    # inspiration taken from:
+    # http://timgolden.me.uk/python/win32_how_do_i/get_dll_version.html
+
+    if GetFileVersionInfo is None:
+        return "---"  # win32api not available
+
+    try:
+        info = GetFileVersionInfo(str(filename), "\\")
+    except Exception:
+        return "---"  # f'failed for {filename}'
+
+    ms = info["FileVersionMS"]
+    ls = info["FileVersionLS"]
+    versionAsList = [HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls)]
+    versionStr = ".".join([str(i) for i in versionAsList])
+
+    return versionStr
 
 
 @dataclass
@@ -322,23 +373,30 @@ class DLLMetadataExtractor:
             return False
 
         try:
+            # First try the new win32apigetVersionString function
+            version_string = _extract_version_string_win32apigetVersionString(
+                metadata.file_path
+            )
+            if version_string != "---" and not metadata.file_version:
+                metadata.file_version = version_string
+
             # Get version info using win32api
             info = win32api.GetFileVersionInfo(metadata.file_path, "\\")
             if not info:
                 return False
 
-            # Extract version numbers from the fixed info
+            # Extract version numbers from the fixed info using HIWORD/LOWORD helpers
             ms = info.get("FileVersionMS", 0)
             ls = info.get("FileVersionLS", 0)
             if ms or ls:
-                file_version = f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+                file_version = f"{HIWORD(ms)}.{LOWORD(ms)}.{HIWORD(ls)}.{LOWORD(ls)}"
                 if not metadata.file_version:
                     metadata.file_version = file_version
 
             ms = info.get("ProductVersionMS", 0)
             ls = info.get("ProductVersionLS", 0)
             if ms or ls:
-                product_version = f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+                product_version = f"{HIWORD(ms)}.{LOWORD(ms)}.{HIWORD(ls)}.{LOWORD(ls)}"
                 if not metadata.product_version:
                     metadata.product_version = product_version
 
