@@ -27,6 +27,16 @@ A powerful Python tool for scanning directories to find DLL files, extracting co
 - 🔒 **Security & Compliance**: CycloneDX SBOM generation for supply chain security analysis
 - 🐍 **Python API**: Use as a library in your own projects
 
+## Changelog
+
+### v0.1.0
+- Initial release
+- Directory scanning functionality
+- PE metadata extraction
+- Static code dependency analysis
+- CLI interface with rich formatting
+- Python API
+
 ## Installation
 
 ### From PyPI (when available)
@@ -40,8 +50,15 @@ pip install dll-scanner
 ```bash
 git clone https://github.com/FlaccidFacade/dll-scanner.git
 cd dll-scanner
+
+# For basic usage
 pip install -e .
+
+# For development with all dev tools (recommended for contributors)
+pip install -e ".[dev]"
 ```
+
+The `.[dev]` extra installs additional development dependencies defined in `pyproject.toml`, including testing tools (pytest, pytest-cov), code formatting (black), linting (flake8), type checking (mypy), and pre-commit hooks.
 
 ## Quick Start
 
@@ -520,13 +537,3 @@ pip install dll-scanner[dev]
 - Use `--max-workers` to control memory usage vs. speed
 - Disable `--parallel` for very large numbers of small files
 - Use `--no-recursive` when you only need files in the target directory
-
-## Changelog
-
-### v0.1.0
-- Initial release
-- Directory scanning functionality
-- PE metadata extraction
-- Static code dependency analysis
-- CLI interface with rich formatting
-- Python API
