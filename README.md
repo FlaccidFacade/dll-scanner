@@ -27,16 +27,6 @@ A powerful Python tool for scanning directories to find DLL files, extracting co
 - 🔒 **Security & Compliance**: CycloneDX SBOM generation for supply chain security analysis
 - 🐍 **Python API**: Use as a library in your own projects
 
-## Changelog
-
-### v0.1.0
-- Initial release
-- Directory scanning functionality
-- PE metadata extraction
-- Static code dependency analysis
-- CLI interface with rich formatting
-- Python API
-
 ## Installation
 
 ### From PyPI (when available)
