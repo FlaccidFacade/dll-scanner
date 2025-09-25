@@ -670,15 +670,18 @@ class DLLMetadataExtractor:
                         "-NoProfile",
                         "-NonInteractive",
                         "-Command",
-                        f'$v = (Get-Item "{metadata.file_path}").VersionInfo; '
-                        f'"FileVersion: $($v.FileVersion)"'
-                        f'; "ProductVersion: $($v.ProductVersion)"'
-                        f'; "CompanyName: $($v.CompanyName)"'
-                        f'; "FileDescription: $($v.FileDescription)"'
-                        f'; "ProductName: $($v.ProductName)"'
-                        f'; "LegalCopyright: $($v.LegalCopyright)"'
-                        f'; "InternalName: $($v.InternalName)"'
-                        f'; "OriginalFilename: $($v.OriginalFilename)"',
+                        (
+                            '$v = (Get-Item $args[0]).VersionInfo; '
+                            '"FileVersion: $($v.FileVersion)"; '
+                            '"ProductVersion: $($v.ProductVersion)"; '
+                            '"CompanyName: $($v.CompanyName)"; '
+                            '"FileDescription: $($v.FileDescription)"; '
+                            '"ProductName: $($v.ProductName)"; '
+                            '"LegalCopyright: $($v.LegalCopyright)"; '
+                            '"InternalName: $($v.InternalName)"; '
+                            '"OriginalFilename: $($v.OriginalFilename)"'
+                        ),
+                        str(metadata.file_path),
                     ]
 
                     result = subprocess.run(
