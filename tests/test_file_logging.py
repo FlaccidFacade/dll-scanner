@@ -31,46 +31,40 @@ def test_setup_logging_creates_file_handler():
     """Test that setup_logging creates a file handler for version extraction logs."""
 
     # Clear any existing handlers
+
     logger_name = "dll_scanner"
     logger = logging.getLogger(logger_name)
+
+    # Clear any existing handlers before test
     for handler in logger.handlers[:]:
         handler.close()
         logger.removeHandler(handler)
 
-    try:
-        # Call setup_logging
-        logger = setup_logging(verbose=False)
+    yield logger
 
-        # Check that log directory and file are created
         log_dir, log_file = _get_log_file_path()
 
-        assert log_dir.exists(), "Log directory should be created"
-        assert log_file.exists(), "Log file should be created"
 
-        # Check that file handler was added
-        logger = logging.getLogger(logger_name)
-        file_handlers = [
-            h for h in logger.handlers if isinstance(h, logging.FileHandler)
-        ]
-        assert len(file_handlers) >= 1, "At least one file handler should be added"
+def test_setup_logging_creates_file_handler(clean_logger):
+    """Test that setup_logging creates a file handler for version extraction logs."""
+    # Call setup_logging
+    logger = setup_logging(verbose=False)
 
-    finally:
-        # Clean up handlers
-        for handler in logger.handlers[:]:
-            handler.close()
-            logger.removeHandler(handler)
+    # Check that log directory and file are created
+    log_dir = Path.home() / ".dll-scanner" / "logs"
+    log_file = log_dir / "dll_version_extraction.log"
+
+    assert log_dir.exists(), "Log directory should be created"
+    assert log_file.exists(), "Log file should be created"
+
+    # Check that file handler was added
+    logger = logging.getLogger("dll_scanner")
+    file_handlers = [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
+    assert len(file_handlers) >= 1, "At least one file handler should be added"
 
 
-def test_version_extraction_logging():
+def test_version_extraction_logging(clean_logger):
     """Test that version extraction attempts are logged to file."""
-
-    # Clear any existing handlers from previous tests
-    logger_name = "dll_scanner"
-    logger = logging.getLogger(logger_name)
-    for handler in logger.handlers[:]:
-        handler.close()
-        logger.removeHandler(handler)
-
     # Clear existing log file
     _cleanup_log_file()
 
@@ -125,24 +119,13 @@ def test_version_extraction_logging():
             )
 
     finally:
-        # Clean up handlers and temporary file
-        for handler in logger.handlers[:]:
-            handler.close()
-            logger.removeHandler(handler)
+        # Clean up temporary file
         if dll_path.exists():
             dll_path.unlink()
 
 
-def test_scanner_uses_file_logging():
+def test_scanner_uses_file_logging(clean_logger):
     """Test that DLL Scanner uses file logging through CLI setup."""
-
-    # Clear any existing handlers from previous tests
-    logger_name = "dll_scanner"
-    logger = logging.getLogger(logger_name)
-    for handler in logger.handlers[:]:
-        handler.close()
-        logger.removeHandler(handler)
-
     # Clear existing log file
     _cleanup_log_file()
 
@@ -180,9 +163,6 @@ def test_scanner_uses_file_logging():
             assert len(log_content.strip()) > 0, "Log file should have content"
 
     finally:
-        # Clean up handlers and temporary file
-        for handler in logger.handlers[:]:
-            handler.close()
-            logger.removeHandler(handler)
+        # Clean up temporary file
         if dll_path.exists():
             dll_path.unlink()
