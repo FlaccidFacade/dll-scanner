@@ -369,7 +369,7 @@ def scan(
 )
 @click.pass_context
 def inspect(
-    ctx: click.Context, dll_file: Path, output: Optional[Path], legacy_json: bool
+    ctx: click.Context, dll_file: Path, output: Optional[Path], legacy_json: bool, extraction_method: tuple[str, ...]
 ) -> None:
     """Inspect a single DLL file and display metadata."""
     console: Console = ctx.obj["console"]
