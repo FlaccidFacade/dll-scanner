@@ -5,6 +5,8 @@ Test suite for DLL Scanner.
 import pytest
 from pathlib import Path
 import tempfile
+import subprocess
+from datetime import datetime
 from unittest.mock import Mock, patch
 
 from dll_scanner import DLLScanner, DLLMetadata, DependencyAnalyzer
@@ -1617,6 +1619,242 @@ class TestIntegration:
                     result == "---"
                 ), f"Expected '---' when GetFileVersionInfo is None, got {result}"
                 print("✓ Version extraction unavailable function test passed")
+        finally:
+            # Clean up
+            dll_path.unlink()
+
+    def test_powershell_version_extraction(self):
+        """Test PowerShell version extraction functionality with mocked subprocess calls."""
+        from unittest.mock import patch, MagicMock
+        from dll_scanner.metadata import (
+            _extract_version_string_powershell,
+            DLLMetadataExtractor,
+            DLLMetadata,
+        )
+        import tempfile
+        import platform
+
+        print("\n=== PowerShell Version Extraction Test ===")
+
+        # Create a temporary fake DLL file for testing
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as temp_file:
+            temp_file.write(b"fake dll content for testing")
+            dll_path = Path(temp_file.name)
+
+        try:
+            # Test case 1: Non-Windows platform should return "---"
+            with patch("platform.system", return_value="Linux"):
+                result = _extract_version_string_powershell(str(dll_path))
+                assert result == "---", f"Expected '---' on non-Windows, got {result}"
+                print("✓ Non-Windows platform test passed")
+
+            # Test case 2: Windows platform with successful PowerShell execution
+            with patch("platform.system", return_value="Windows"):
+                mock_result = MagicMock()
+                mock_result.returncode = 0
+                mock_result.stdout = "1.1.1q\n"
+
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = _extract_version_string_powershell(str(dll_path))
+                    assert result == "1.1.1q", f"Expected '1.1.1q', got {result}"
+
+                    # Verify the correct PowerShell command was called
+                    mock_run.assert_called_once()
+                    call_args = mock_run.call_args
+                    assert "powershell.exe" in call_args[0][0][0]
+                    assert dll_path.name in " ".join(call_args[0][0])
+                    print("✓ Successful PowerShell execution test passed")
+
+            # Test case 3: Windows platform with PowerShell failure
+            with patch("platform.system", return_value="Windows"):
+                mock_result = MagicMock()
+                mock_result.returncode = 1
+                mock_result.stdout = ""
+
+                with patch("subprocess.run", return_value=mock_result):
+                    result = _extract_version_string_powershell(str(dll_path))
+                    assert (
+                        result == "---"
+                    ), f"Expected '---' on PowerShell failure, got {result}"
+                    print("✓ PowerShell failure test passed")
+
+            # Test case 4: Windows platform with timeout exception
+            with patch("platform.system", return_value="Windows"):
+                with patch(
+                    "subprocess.run", side_effect=subprocess.TimeoutExpired("cmd", 10)
+                ):
+                    result = _extract_version_string_powershell(str(dll_path))
+                    assert result == "---", f"Expected '---' on timeout, got {result}"
+                    print("✓ PowerShell timeout test passed")
+
+            # Test case 5: Test DLLMetadataExtractor PowerShell method on non-Windows
+            extractor = DLLMetadataExtractor()
+            metadata = DLLMetadata(
+                file_path=str(dll_path),
+                file_name=dll_path.name,
+                file_size=100,
+                modification_time=datetime.now(),
+            )
+
+            with patch("platform.system", return_value="Linux"):
+                result = extractor._extract_version_info_powershell(metadata)
+                assert result is False, "Expected False on non-Windows platform"
+                print("✓ DLLMetadataExtractor non-Windows test passed")
+
+            # Test case 6: Test DLLMetadataExtractor PowerShell method on Windows with success
+            metadata = DLLMetadata(
+                file_path=str(dll_path),
+                file_name=dll_path.name,
+                file_size=100,
+                modification_time=datetime.now(),
+            )
+
+            with patch("platform.system", return_value="Windows"):
+                with patch(
+                    "dll_scanner.metadata._extract_version_string_powershell",
+                    return_value="2.0.1",
+                ):
+                    # Mock the detailed PowerShell command as well
+                    mock_detailed = MagicMock()
+                    mock_detailed.returncode = 0
+                    mock_detailed.stdout = (
+                        "FileVersion: 2.0.1\n"
+                        "ProductVersion: 2.0.1.0\n"
+                        "CompanyName: Test Company\n"
+                        "FileDescription: Test DLL\n"
+                        "ProductName: Test Product\n"
+                        "LegalCopyright: Test Copyright\n"
+                        "InternalName: testdll\n"
+                        "OriginalFilename: test.dll\n"
+                    )
+
+                    with patch("subprocess.run", return_value=mock_detailed):
+                        result = extractor._extract_version_info_powershell(metadata)
+                        assert result is True, "Expected True on successful extraction"
+                        assert (
+                            metadata.file_version == "2.0.1"
+                        ), f"Expected '2.0.1', got '{metadata.file_version}'"
+                        assert (
+                            metadata.product_version == "2.0.1.0"
+                        ), f"Expected '2.0.1.0', got '{metadata.product_version}'"
+                        assert (
+                            metadata.company_name == "Test Company"
+                        ), f"Expected 'Test Company', got '{metadata.company_name}'"
+                        assert (
+                            metadata.file_description == "Test DLL"
+                        ), f"Expected 'Test DLL', got '{metadata.file_description}'"
+                        print(
+                            "✓ DLLMetadataExtractor successful extraction test passed"
+                        )
+
+            # Test case 7: Test with empty/null values from PowerShell
+            metadata = DLLMetadata(
+                file_path=str(dll_path),
+                file_name=dll_path.name,
+                file_size=100,
+                modification_time=datetime.now(),
+            )
+
+            with patch("platform.system", return_value="Windows"):
+                with patch(
+                    "dll_scanner.metadata._extract_version_string_powershell",
+                    return_value="",
+                ):
+                    result = extractor._extract_version_info_powershell(metadata)
+                    assert (
+                        result is False
+                    ), "Expected False when no version info extracted"
+                    print("✓ Empty version extraction test passed")
+
+        finally:
+            # Clean up
+            dll_path.unlink()
+
+    def test_extract_version_string_powershell_function(self):
+        """Test the _extract_version_string_powershell function directly."""
+        from unittest.mock import patch, MagicMock
+        from dll_scanner.metadata import _extract_version_string_powershell
+        import tempfile
+        import subprocess
+
+        print("\n=== PowerShell Function Direct Test ===")
+
+        # Create a temporary fake DLL file for testing
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as temp_file:
+            temp_file.write(b"fake dll content for testing")
+            dll_path = Path(temp_file.name)
+
+        try:
+            # Test case 1: Successful version extraction with various version formats
+            test_cases = [
+                "1.2.3.4",
+                "1.1.1q",  # The specific format mentioned in the issue
+                "10.0.19041.1",
+                "2.0.50727.4927",
+            ]
+
+            with patch("platform.system", return_value="Windows"):
+                for expected_version in test_cases:
+                    mock_result = MagicMock()
+                    mock_result.returncode = 0
+                    mock_result.stdout = f"{expected_version}\n"
+
+                    with patch("subprocess.run", return_value=mock_result):
+                        result = _extract_version_string_powershell(str(dll_path))
+                        assert (
+                            result == expected_version
+                        ), f"Expected '{expected_version}', got '{result}'"
+                        print(f"✓ Version format test passed: {expected_version}")
+
+            # Test case 2: Test with various null/empty scenarios
+            null_cases = [
+                "",
+                "null",
+                "$null",
+                "NULL",
+                "\n",
+                "   \n   ",
+            ]
+
+            with patch("platform.system", return_value="Windows"):
+                for null_case in null_cases:
+                    mock_result = MagicMock()
+                    mock_result.returncode = 0
+                    mock_result.stdout = null_case
+
+                    with patch("subprocess.run", return_value=mock_result):
+                        result = _extract_version_string_powershell(str(dll_path))
+                        assert (
+                            result == "---"
+                        ), f"Expected '---' for null case '{null_case}', got '{result}'"
+
+                print("✓ Null/empty value handling tests passed")
+
+            # Test case 3: Test various error conditions
+            with patch("platform.system", return_value="Windows"):
+                # Subprocess error
+                with patch(
+                    "subprocess.run",
+                    side_effect=subprocess.SubprocessError("Test error"),
+                ):
+                    result = _extract_version_string_powershell(str(dll_path))
+                    assert (
+                        result == "---"
+                    ), f"Expected '---' on subprocess error, got {result}"
+
+                # OS error
+                with patch("subprocess.run", side_effect=OSError("Test OS error")):
+                    result = _extract_version_string_powershell(str(dll_path))
+                    assert result == "---", f"Expected '---' on OS error, got {result}"
+
+                # Generic exception
+                with patch("subprocess.run", side_effect=Exception("Test exception")):
+                    result = _extract_version_string_powershell(str(dll_path))
+                    assert (
+                        result == "---"
+                    ), f"Expected '---' on generic exception, got {result}"
+
+                print("✓ Error condition handling tests passed")
 
         finally:
             # Clean up
