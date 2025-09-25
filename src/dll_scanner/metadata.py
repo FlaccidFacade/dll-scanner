@@ -95,12 +95,17 @@ def _extract_version_string_powershell(filename: str) -> str:
     try:
         # PowerShell command to get file version info
         # Using -ExpandProperty to get the VersionInfo object, then select FileVersion
+        def _escape_powershell_single_quoted_string(s: str) -> str:
+            # Escape single quotes by doubling them, as per PowerShell rules
+            return s.replace("'", "''")
+
+        escaped_filename = _escape_powershell_single_quoted_string(filename)
         powershell_cmd = [
             "powershell.exe",
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            f'(Get-Item "{filename}").VersionInfo.FileVersion',
+            f"(Get-Item '{escaped_filename}').VersionInfo.FileVersion",
         ]
 
         # Execute PowerShell command with timeout
