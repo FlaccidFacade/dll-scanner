@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from dataclasses import dataclass
 
-from .metadata import DLLMetadata, extract_dll_metadata, ExtractionMethod
+from dll_scanner.metadata import DLLMetadata, extract_dll_metadata
 
 
 @dataclass
