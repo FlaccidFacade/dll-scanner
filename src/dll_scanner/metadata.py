@@ -671,7 +671,7 @@ class DLLMetadataExtractor:
                         "-NonInteractive",
                         "-Command",
                         (
-                            '$v = (Get-Item $args[0]).VersionInfo; '
+                            "$v = (Get-Item $args[0]).VersionInfo; "
                             '"FileVersion: $($v.FileVersion)"; '
                             '"ProductVersion: $($v.ProductVersion)"; '
                             '"CompanyName: $($v.CompanyName)"; '
@@ -773,14 +773,14 @@ class DLLMetadataExtractor:
                     )
 
                 # Return True if we extracted any version information
-                result = bool(
+                extraction_successful = bool(
                     metadata.file_version
                     or metadata.product_version
                     or metadata.company_name
                     or metadata.file_description
                 )
 
-                if result:
+                if extraction_successful:
                     self.logger.debug(
                         f"PowerShell extraction succeeded for {metadata.file_name}"
                     )
