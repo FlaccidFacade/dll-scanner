@@ -268,6 +268,153 @@ class Program {
         assert report["summary"]["total_confirmed_dependencies"] == 1
         assert len(report["confirmed_dlls"]) == 1
 
+    def test_analyze_source_file_with_ctypes_cdll(
+        self, temp_directory, sample_dll_metadata
+    ):
+        """Test analyzing Python source file with ctypes.CDLL."""
+        py_file = temp_directory / "test.py"
+        py_file.write_text(
+            """
+import ctypes
+
+# Load a shared library using CDLL
+libc = ctypes.CDLL("sample.dll")
+        """
+        )
+
+        analyzer = DependencyAnalyzer()
+        result = analyzer.analyze_dll_dependencies(sample_dll_metadata, temp_directory)
+
+        assert result.source_files_analyzed == 1
+
+        # Check for ctypes CDLL match
+        ctypes_matches = [
+            dep
+            for dep in result.confirmed_dependencies
+            if dep.match_type == "python_ctypes_direct"
+        ]
+        assert len(ctypes_matches) > 0
+        assert ctypes_matches[0].dll_name == "sample.dll"
+        assert ctypes_matches[0].confidence == 0.95
+
+    def test_analyze_source_file_with_ctypes_windll(
+        self, temp_directory, sample_dll_metadata
+    ):
+        """Test analyzing Python source file with ctypes.WinDLL."""
+        py_file = temp_directory / "test.py"
+        py_file.write_text(
+            """
+import ctypes
+
+# Load Windows DLL using WinDLL
+mylib = ctypes.WinDLL("sample.dll")
+        """
+        )
+
+        analyzer = DependencyAnalyzer()
+        result = analyzer.analyze_dll_dependencies(sample_dll_metadata, temp_directory)
+
+        assert result.source_files_analyzed == 1
+
+        # Check for ctypes WinDLL match
+        ctypes_matches = [
+            dep
+            for dep in result.confirmed_dependencies
+            if dep.match_type == "python_ctypes_direct"
+        ]
+        assert len(ctypes_matches) > 0
+        assert ctypes_matches[0].dll_name == "sample.dll"
+
+    def test_analyze_source_file_with_ctypes_loadlibrary(
+        self, temp_directory, sample_dll_metadata
+    ):
+        """Test analyzing Python source file with ctypes.cdll.LoadLibrary."""
+        py_file = temp_directory / "test.py"
+        py_file.write_text(
+            """
+import ctypes
+
+# Load library using LoadLibrary method
+lib = ctypes.cdll.LoadLibrary("sample.dll")
+        """
+        )
+
+        analyzer = DependencyAnalyzer()
+        result = analyzer.analyze_dll_dependencies(sample_dll_metadata, temp_directory)
+
+        assert result.source_files_analyzed == 1
+
+        # Check for ctypes LoadLibrary match
+        loadlib_matches = [
+            dep
+            for dep in result.confirmed_dependencies
+            if dep.match_type == "python_ctypes_loadlibrary"
+        ]
+        assert len(loadlib_matches) > 0
+        assert loadlib_matches[0].dll_name == "sample.dll"
+        assert loadlib_matches[0].confidence == 0.95
+
+    def test_analyze_source_file_with_ctypes_windll_attr(
+        self, temp_directory, sample_dll_metadata
+    ):
+        """Test analyzing Python source file with ctypes.windll.library."""
+        py_file = temp_directory / "test.py"
+        py_file.write_text(
+            """
+import ctypes
+
+# Access library through windll attribute
+result = ctypes.windll.sample.some_function()
+        """
+        )
+
+        analyzer = DependencyAnalyzer()
+        result = analyzer.analyze_dll_dependencies(sample_dll_metadata, temp_directory)
+
+        assert result.source_files_analyzed == 1
+
+        # Check for ctypes windll attribute match
+        ctypes_matches = [
+            dep
+            for dep in result.confirmed_dependencies
+            if dep.match_type == "python_ctypes"
+        ]
+        assert len(ctypes_matches) > 0
+        assert ctypes_matches[0].dll_name == "sample.dll"
+
+    def test_analyze_source_file_with_mixed_ctypes_patterns(
+        self, temp_directory, sample_dll_metadata
+    ):
+        """Test analyzing Python source with multiple ctypes patterns."""
+        py_file = temp_directory / "test.py"
+        py_file.write_text(
+            """
+import ctypes
+
+# Multiple ways to load the same library
+lib1 = ctypes.CDLL("sample.dll")
+lib2 = ctypes.WinDLL("sample.dll")  
+lib3 = ctypes.windll.LoadLibrary("sample.dll")
+result = ctypes.cdll.sample.function()
+        """
+        )
+
+        analyzer = DependencyAnalyzer()
+        result = analyzer.analyze_dll_dependencies(sample_dll_metadata, temp_directory)
+
+        assert result.source_files_analyzed == 1
+
+        # Should find multiple matches
+        all_matches = result.confirmed_dependencies
+        assert len(all_matches) >= 3  # At least 3 different patterns should match
+
+        # Check that different match types are detected
+        match_types = {match.match_type for match in all_matches}
+        assert "python_ctypes_direct" in match_types
+        assert (
+            "python_ctypes_loadlibrary" in match_types or "python_ctypes" in match_types
+        )
+
 
 class TestCLI:
     """Tests for CLI functionality."""
