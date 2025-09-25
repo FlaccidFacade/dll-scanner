@@ -15,12 +15,12 @@ from rich.progress import Progress
 from rich.panel import Panel
 from rich.text import Text
 
-from . import __version__
-from .scanner import DLLScanner, ScanResult
-from .analyzer import DependencyAnalyzer, AnalysisResult
-from .metadata import DLLMetadata
-from .cyclonedx_exporter import CycloneDXExporter
-from .page_generator import PageGenerator
+from dll_scanner import __version__
+from dll_scanner.scanner import DLLScanner, ScanResult
+from dll_scanner.analyzer import DependencyAnalyzer, AnalysisResult
+from dll_scanner.metadata import DLLMetadata
+from dll_scanner.cyclonedx_exporter import CycloneDXExporter
+from dll_scanner.page_generator import PageGenerator
 
 
 def setup_logging(verbose: bool) -> logging.Logger:

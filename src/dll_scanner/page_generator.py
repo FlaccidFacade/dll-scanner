@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, cast
 from datetime import datetime
 
-from .metadata import DLLMetadata
-from .scanner import ScanResult
+from dll_scanner.metadata import DLLMetadata
+from dll_scanner.scanner import ScanResult
 
 
 class PageGenerator:

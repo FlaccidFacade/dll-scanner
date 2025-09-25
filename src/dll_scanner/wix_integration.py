@@ -18,8 +18,8 @@ from typing import Dict, Optional, Any
 import urllib.request
 import urllib.error
 
-from .metadata import DLLMetadata
-from .scanner import ScanResult
+from dll_scanner.metadata import DLLMetadata
+from dll_scanner.scanner import ScanResult
 
 
 @dataclass
