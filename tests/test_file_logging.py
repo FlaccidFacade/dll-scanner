@@ -6,11 +6,24 @@ import logging
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import pytest
 
 from dll_scanner.cli import setup_logging
 from dll_scanner.metadata import DLLMetadataExtractor
 from dll_scanner.scanner import DLLScanner
+
+
+def _get_log_file_path():
+    """Helper function to get the log directory and file path."""
+    log_dir = Path.home() / ".dll-scanner" / "logs"
+    log_file = log_dir / "dll_version_extraction.log"
+    return log_dir, log_file
+
+
+def _cleanup_log_file():
+    """Helper function to clean up the log file if it exists."""
+    log_dir, log_file = _get_log_file_path()
+    if log_file.exists():
+        log_file.unlink()
 
 
 def test_setup_logging_creates_file_handler():
@@ -28,8 +41,7 @@ def test_setup_logging_creates_file_handler():
         logger = setup_logging(verbose=False)
 
         # Check that log directory and file are created
-        log_dir = Path.home() / ".dll-scanner" / "logs"
-        log_file = log_dir / "dll_version_extraction.log"
+        log_dir, log_file = _get_log_file_path()
 
         assert log_dir.exists(), "Log directory should be created"
         assert log_file.exists(), "Log file should be created"
@@ -59,10 +71,10 @@ def test_version_extraction_logging():
         logger.removeHandler(handler)
 
     # Clear existing log file
-    log_dir = Path.home() / ".dll-scanner" / "logs"
-    log_file = log_dir / "dll_version_extraction.log"
-    if log_file.exists():
-        log_file.unlink()
+    _cleanup_log_file()
+
+    # Get log file path for later use
+    log_dir, log_file = _get_log_file_path()
 
     # Set up logging first
     logger = setup_logging(verbose=True)
@@ -131,10 +143,10 @@ def test_scanner_uses_file_logging():
         logger.removeHandler(handler)
 
     # Clear existing log file
-    log_dir = Path.home() / ".dll-scanner" / "logs"
-    log_file = log_dir / "dll_version_extraction.log"
-    if log_file.exists():
-        log_file.unlink()
+    _cleanup_log_file()
+
+    # Get log file path for later use
+    log_dir, log_file = _get_log_file_path()
 
     # Set up logging first
     logger = setup_logging(verbose=False)
