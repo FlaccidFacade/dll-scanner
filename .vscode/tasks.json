@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Setup Python Dev Env (Windows)",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "if (-not (Test-Path -Path .venv)) { python -m venv .venv }; .\\.venv\\Scripts\\Activate.ps1; pip install --upgrade pip; pip install -e '.[dev]'"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "windows": {
+                "command": "powershell"
+            }
+        },
+        {
+            "label": "Setup Python Dev Env (Ubuntu/Linux)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "if [ ! -d .venv ]; then python3 -m venv .venv; fi && source .venv/bin/activate && pip install --upgrade pip && pip install -e '.[dev]'"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "linux": {
+                "command": "bash"
+            },
+            "osx": {
+                "command": "bash"
+            }
+        }
+    ]
+}
