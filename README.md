@@ -94,6 +94,25 @@ dll-scanner scan /path/to/dlls --no-recursive
 dll-scanner scan /path/to/dlls --max-workers 8
 ```
 
+#### Version Extraction Method Selection
+
+```bash
+# Use only pefile library for version extraction
+dll-scanner scan /path/to/dlls --extraction-method pefile
+
+# Use only win32api library (Windows only)
+dll-scanner scan /path/to/dlls --extraction-method win32api
+
+# Use multiple specific methods
+dll-scanner scan /path/to/dlls --extraction-method win32api --extraction-method pefile
+
+# Use all available methods (default behavior)
+dll-scanner scan /path/to/dlls --extraction-method all
+
+# Inspect single file with specific extraction method
+dll-scanner inspect mylib.dll --extraction-method fileinfo
+```
+
 #### Dependency Analysis
 
 ```bash
@@ -152,10 +171,17 @@ dll-scanner inspect kernel32.dll --output kernel32_metadata.json
 
 ```python
 from dll_scanner import DLLScanner, DependencyAnalyzer
+from dll_scanner.metadata import ExtractionMethod
 from pathlib import Path
 
-# Initialize scanner
+# Initialize scanner with default extraction methods
 scanner = DLLScanner(max_workers=4)
+
+# Initialize scanner with specific extraction methods
+scanner = DLLScanner(
+    max_workers=4,
+    extraction_methods={ExtractionMethod.WIN32API, ExtractionMethod.PEFILE}
+)
 
 # Scan directory
 result = scanner.scan_directory(Path("/path/to/project"))
@@ -163,6 +189,13 @@ result = scanner.scan_directory(Path("/path/to/project"))
 print(f"Found {result.total_dlls_found} DLL files")
 for dll in result.dll_files:
     print(f"- {dll.file_name}: {dll.architecture}, {dll.company_name}")
+
+# Extract metadata from single file with specific methods
+from dll_scanner.metadata import extract_dll_metadata
+metadata = extract_dll_metadata(
+    Path("mylib.dll"), 
+    {ExtractionMethod.PEFILE}
+)
 
 # Analyze dependencies
 analyzer = DependencyAnalyzer()

@@ -7,12 +7,17 @@ from pathlib import Path
 import tempfile
 import subprocess
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from dll_scanner import DLLScanner, DLLMetadata, DependencyAnalyzer
 from dll_scanner.scanner import ScanResult
 from dll_scanner.analyzer import DependencyMatch, AnalysisResult
 from dll_scanner.cyclonedx_exporter import CycloneDXExporter
+from dll_scanner.metadata import (
+    ExtractionMethod,
+    DLLMetadataExtractor,
+    extract_dll_metadata,
+)
 
 
 @pytest.fixture
@@ -1859,6 +1864,252 @@ class TestIntegration:
         finally:
             # Clean up
             dll_path.unlink()
+
+
+class TestExtractionMethods:
+    """Test suite for library selection functionality."""
+
+    def test_extraction_method_enum_values(self):
+        """Test that extraction method enum has correct values."""
+        assert ExtractionMethod.WIN32API.value == "win32api"
+        assert ExtractionMethod.PEFILE.value == "pefile"
+        assert ExtractionMethod.FILEINFO.value == "fileinfo"
+        assert ExtractionMethod.ALL.value == "all"
+
+    def test_dll_metadata_extractor_default_methods(self):
+        """Test DLLMetadataExtractor uses ALL method by default."""
+        extractor = DLLMetadataExtractor()
+        assert ExtractionMethod.ALL in extractor.extraction_methods
+
+    def test_dll_metadata_extractor_custom_methods(self):
+        """Test DLLMetadataExtractor accepts custom extraction methods."""
+        methods = {ExtractionMethod.WIN32API, ExtractionMethod.PEFILE}
+        extractor = DLLMetadataExtractor(methods)
+        assert extractor.extraction_methods == methods
+
+    @patch("dll_scanner.metadata.pefile")
+    def test_extraction_method_win32api_only(self, mock_pefile):
+        """Test extraction using only win32api method."""
+        import tempfile
+
+        # Create a fake DLL file
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
+            tmp_file.write(b"MZ" + b"\x00" * 100)
+            dll_path = Path(tmp_file.name)
+
+        try:
+            # Set up mocks
+            mock_pe = MagicMock()
+            mock_pefile.PE.return_value = mock_pe
+            mock_pe.FILE_HEADER.Machine = 0x014C  # i386
+            mock_pe.OPTIONAL_HEADER.Subsystem = 2  # Windows GUI
+            mock_pe.OPTIONAL_HEADER.DllCharacteristics = 0
+
+            extractor = DLLMetadataExtractor({ExtractionMethod.WIN32API})
+
+            # Mock the win32api method to return True (successful extraction)
+            with patch.object(
+                extractor, "_extract_version_info_win32api", return_value=True
+            ) as mock_win32api:
+                with patch.object(
+                    extractor, "_extract_version_info_fileinfo", return_value=False
+                ) as mock_fileinfo:
+                    with patch.object(
+                        extractor, "_extract_version_info_pefile"
+                    ) as mock_pefile_method:
+                        extractor.extract_metadata(dll_path)
+
+                        # win32api method should be called
+                        mock_win32api.assert_called_once()
+                        # other methods should not be called
+                        mock_fileinfo.assert_not_called()
+                        mock_pefile_method.assert_not_called()
+
+        finally:
+            dll_path.unlink()
+
+    @patch("dll_scanner.metadata.pefile")
+    def test_extraction_method_pefile_only(self, mock_pefile):
+        """Test extraction using only pefile method."""
+        import tempfile
+
+        # Create a fake DLL file
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
+            tmp_file.write(b"MZ" + b"\x00" * 100)
+            dll_path = Path(tmp_file.name)
+
+        try:
+            # Set up mocks
+            mock_pe = MagicMock()
+            mock_pefile.PE.return_value = mock_pe
+            mock_pe.FILE_HEADER.Machine = 0x014C  # i386
+            mock_pe.OPTIONAL_HEADER.Subsystem = 2  # Windows GUI
+            mock_pe.OPTIONAL_HEADER.DllCharacteristics = 0
+
+            extractor = DLLMetadataExtractor({ExtractionMethod.PEFILE})
+
+            with patch.object(
+                extractor, "_extract_version_info_win32api", return_value=False
+            ) as mock_win32api:
+                with patch.object(
+                    extractor, "_extract_version_info_fileinfo", return_value=False
+                ) as mock_fileinfo:
+                    with patch.object(
+                        extractor, "_extract_version_info_pefile"
+                    ) as mock_pefile_method:
+                        extractor.extract_metadata(dll_path)
+
+                        # pefile method should be called
+                        mock_pefile_method.assert_called_once()
+                        # other methods should not be called
+                        mock_win32api.assert_not_called()
+                        mock_fileinfo.assert_not_called()
+
+        finally:
+            dll_path.unlink()
+
+    @patch("dll_scanner.metadata.pefile")
+    def test_extraction_method_multiple_methods(self, mock_pefile):
+        """Test extraction using multiple specific methods."""
+        import tempfile
+
+        # Create a fake DLL file
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
+            tmp_file.write(b"MZ" + b"\x00" * 100)
+            dll_path = Path(tmp_file.name)
+
+        try:
+            # Set up mocks
+            mock_pe = MagicMock()
+            mock_pefile.PE.return_value = mock_pe
+            mock_pe.FILE_HEADER.Machine = 0x014C  # i386
+            mock_pe.OPTIONAL_HEADER.Subsystem = 2  # Windows GUI
+            mock_pe.OPTIONAL_HEADER.DllCharacteristics = 0
+
+            methods = {ExtractionMethod.WIN32API, ExtractionMethod.FILEINFO}
+            extractor = DLLMetadataExtractor(methods)
+
+            with patch.object(
+                extractor, "_extract_version_info_win32api", return_value=False
+            ) as mock_win32api:
+                with patch.object(
+                    extractor, "_extract_version_info_fileinfo", return_value=True
+                ) as mock_fileinfo:
+                    with patch.object(
+                        extractor, "_extract_version_info_pefile"
+                    ) as mock_pefile_method:
+                        extractor.extract_metadata(dll_path)
+
+                        # Both specified methods should be called
+                        mock_win32api.assert_called_once()
+                        mock_fileinfo.assert_called_once()
+                        # pefile method should not be called
+                        mock_pefile_method.assert_not_called()
+
+        finally:
+            dll_path.unlink()
+
+    def test_extract_dll_metadata_with_methods(self):
+        """Test convenience function accepts extraction methods."""
+        import tempfile
+
+        # Create a fake DLL file
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as tmp_file:
+            tmp_file.write(b"MZ" + b"\x00" * 100)
+            dll_path = Path(tmp_file.name)
+
+        try:
+            methods = {ExtractionMethod.PEFILE}
+
+            with patch(
+                "dll_scanner.metadata.DLLMetadataExtractor"
+            ) as mock_extractor_class:
+                mock_extractor = MagicMock()
+                mock_extractor_class.return_value = mock_extractor
+                mock_metadata = MagicMock()
+                mock_extractor.extract_metadata.return_value = mock_metadata
+
+                result = extract_dll_metadata(dll_path, methods)
+
+                # Verify extractor was created with correct methods
+                mock_extractor_class.assert_called_once_with(methods)
+                mock_extractor.extract_metadata.assert_called_once_with(dll_path)
+                assert result == mock_metadata
+
+        finally:
+            dll_path.unlink()
+
+    def test_dll_scanner_with_extraction_methods(self):
+        """Test DLLScanner accepts and uses extraction methods."""
+        methods = {ExtractionMethod.WIN32API}
+        scanner = DLLScanner(extraction_methods=methods)
+        assert scanner.extraction_methods == methods
+
+    @patch("dll_scanner.scanner.extract_dll_metadata")
+    def test_dll_scanner_passes_extraction_methods(self, mock_extract):
+        """Test DLLScanner passes extraction methods to extract_dll_metadata."""
+        import tempfile
+
+        # Create temporary directory and DLL file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            dll_file = temp_path / "test.dll"
+            dll_file.write_bytes(b"fake dll content")
+
+            # Mock metadata
+            mock_metadata = MagicMock()
+            mock_metadata.file_name = "test.dll"
+            mock_extract.return_value = mock_metadata
+
+            methods = {ExtractionMethod.PEFILE}
+            scanner = DLLScanner(extraction_methods=methods)
+
+            # Test scan_file method
+            scanner.scan_file(dll_file)
+
+            # Verify extract_dll_metadata was called with extraction methods
+            mock_extract.assert_called_with(dll_file, methods)
+
+
+class TestCLIExtractionMethods:
+    """Test CLI extraction method parsing."""
+
+    def test_parse_extraction_methods_default(self):
+        """Test parsing empty extraction methods returns ALL."""
+        from dll_scanner.cli import _parse_extraction_methods
+
+        result = _parse_extraction_methods(())
+        assert result == {ExtractionMethod.ALL}
+
+    def test_parse_extraction_methods_single(self):
+        """Test parsing single extraction method."""
+        from dll_scanner.cli import _parse_extraction_methods
+
+        result = _parse_extraction_methods(("win32api",))
+        assert result == {ExtractionMethod.WIN32API}
+
+    def test_parse_extraction_methods_multiple(self):
+        """Test parsing multiple extraction methods."""
+        from dll_scanner.cli import _parse_extraction_methods
+
+        result = _parse_extraction_methods(("win32api", "pefile"))
+        expected = {ExtractionMethod.WIN32API, ExtractionMethod.PEFILE}
+        assert result == expected
+
+    def test_parse_extraction_methods_case_insensitive(self):
+        """Test parsing is case insensitive."""
+        from dll_scanner.cli import _parse_extraction_methods
+
+        result = _parse_extraction_methods(("WIN32API", "PeFile"))
+        expected = {ExtractionMethod.WIN32API, ExtractionMethod.PEFILE}
+        assert result == expected
+
+    def test_parse_extraction_methods_invalid(self):
+        """Test parsing invalid method returns ALL."""
+        from dll_scanner.cli import _parse_extraction_methods
+
+        result = _parse_extraction_methods(("invalid_method",))
+        assert result == {ExtractionMethod.ALL}
 
 
 if __name__ == "__main__":
